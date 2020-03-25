@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Linq;
 using JetBrains.Collections.Viewable;
 using JetBrains.DataFlow;
 using JetBrains.Diagnostics;
@@ -12,7 +11,6 @@ using JetBrains.Rd.Base;
 using JetBrains.Rd.Impl;
 using JetBrains.Rd.Tasks;
 using JetBrains.ReSharper.Features.XamlRendererHost.Preview;
-using JetBrains.ReSharper.Psi.Cpp.Caches;
 using JetBrains.Rider.Model;
 using JetBrains.Unreal.Lib;
 using JetBrains.Util;
@@ -22,27 +20,25 @@ namespace ReSharperPlugin.UnrealEditor
     [SolutionComponent]
     public class RiderBackendToUnrealEditor
     {
-        private readonly IScheduler myDispatcher;
-        private readonly ISolution mySolution;
-        private readonly ILogger myLogger;
-        private readonly UnrealHost myUnrealHost;
-        private readonly UnrealLinkResolver myLinkResolver;
-        private readonly EditorNavigator myEditorNavigator;
-        private readonly CppGlobalSymbolCache myCppSymbolNameCache;
-        private readonly IProperty<RdEditorModel> myEditorModel;
-
         private const string PortFileName = "UnrealProtocolPort.txt";
         private const string ClosedFileExtension = ".closed";
+        private readonly IScheduler myDispatcher;
+        private readonly IProperty<RdEditorModel> myEditorModel;
+        private readonly Lifetime myLifetime;
+        private readonly ILogger myLogger;
+        private readonly ISolution mySolution;
+        private readonly UnrealToolWindowHost myToolWindowHost;
+        private readonly UnrealHost myUnrealHost;
 
         public RiderBackendToUnrealEditor(Lifetime lifetime, IScheduler dispatcher, ISolution solution, ILogger logger,
-            UnrealHost unrealHost, UnrealLinkResolver linkResolver, EditorNavigator editorNavigator)
+            UnrealHost unrealHost, UnrealToolWindowHost toolWindowHost)
         {
+            myLifetime = lifetime;
             myDispatcher = dispatcher;
             mySolution = solution;
             myLogger = logger;
             myUnrealHost = unrealHost;
-            myLinkResolver = linkResolver;
-            myEditorNavigator = editorNavigator;
+            myToolWindowHost = toolWindowHost;
 
             myLogger.Info("RiderBackendToUnrealEditor building started");
 
@@ -114,19 +110,18 @@ namespace ReSharperPlugin.UnrealEditor
                 var identities = new Identities(IdKind.Client);
                 var protocol = new Protocol($"UnrealRiderClient-{projectName}", serializers, identities,
                     myDispatcher, wire, modelLifetime);
-                wire.Connected.WhenTrue(modelLifetime, lf =>
-                {
-                    ResetModel(lf, protocol);
-                });
+                wire.Connected.WhenTrue(modelLifetime, lf => { ResetModel(lf, protocol); });
             };
             watcher.Created += handler;
             watcher.Changed += handler;
         }
 
 
-        void OnMessageReceived(RdRiderModel riderModel, UnrealLogEvent message)
+        private void OnMessageReceived(UnrealLogEvent message, UnrealTabModel unrealTabModel,
+            RdEditorModel unrealModel, RdRiderModel riderModel)
         {
-            riderModel.UnrealLog.Fire(message);
+            unrealTabModel.UnrealPane.UnrealLog(message);
+            myToolWindowHost.Highlight(message, unrealTabModel, unrealModel);
         }
 
 
@@ -135,7 +130,6 @@ namespace ReSharperPlugin.UnrealEditor
             myUnrealHost.PerformModelAction(riderModel =>
             {
                 UE4Library.RegisterDeclaredTypesSerializers(riderModel.SerializationContext.Serializers);
-                riderModel.EditorId.SetValue(riderModel.EditorId.Value + 1);
             });
 
             myEditorModel.SetValue(lf, new RdEditorModel(lf, protocol));
@@ -144,50 +138,28 @@ namespace ReSharperPlugin.UnrealEditor
                 {
                     UE4Library.RegisterDeclaredTypesSerializers(unrealModel.SerializationContext.Serializers);
 
-                    unrealModel.AllowSetForegroundWindow.Set((lt, pid) =>
-                    {
-                        return myUnrealHost.PerformModelAction(riderModel =>
-                            riderModel.AllowSetForegroundWindow.Start(lt, pid)) as RdTask<bool>;
-                    });
+                    UnrealTabModel unrealTabModel = null;
 
-                    unrealModel.UnrealLog.Advise(viewLifetime,
-                        logEvent =>
+                    unrealModel.ProjectName.Advise(viewLifetime,
+                        name =>
                         {
-                            myUnrealHost.PerformModelAction(riderModel => { OnMessageReceived(riderModel, logEvent); });
+                            myUnrealHost.PerformModelAction(riderModel =>
+                            {
+                                unrealTabModel = myToolWindowHost.AddTab(name.Data, unrealModel);
+                            });
                         });
+                    unrealModel.UnrealLog.Advise(viewLifetime,
+                        logEvent => myUnrealHost.PerformModelAction(riderModel =>
+                            OnMessageReceived(logEvent, unrealTabModel, unrealModel, riderModel)));
+                    unrealModel.AllowSetForegroundWindow.Set((lt, pid) =>
+                        myUnrealHost.PerformModelAction(riderModel =>
+                            riderModel.AllowSetForegroundWindow.Start(lt, pid)) as RdTask<bool>);
 
-                    unrealModel.OnBlueprintAdded.Advise(viewLifetime, blueprintClass =>
-                    {
-                        //todo
-                    });
                     myUnrealHost.PerformModelAction(riderModel =>
                     {
-                        riderModel.FilterLinkCandidates.Set((lifetime, candidates) =>
-                            RdTask<ILinkResponse[]>.Successful(candidates
-                                .Select(request => myLinkResolver.ResolveLink(request, unrealModel.IsBlueprintPathName))
-                                .AsArray()));
-                        riderModel.IsMethodReference.Set((lifetime, methodReference) =>
-                        {
-                            var b = myEditorNavigator.IsMethodReference(methodReference);
-                            return RdTask<bool>.Successful(b);
-                        });
-                        riderModel.OpenBlueprint.Advise(viewLifetime, blueprintReference =>
-                            OnOpenedBlueprint(unrealModel, blueprintReference));
-
-                        riderModel.NavigateToClass.Advise(viewLifetime,
-                            uClass => myEditorNavigator.NavigateToClass(uClass));
-
-                        riderModel.NavigateToMethod.Advise(viewLifetime,
-                            methodReference => myEditorNavigator.NavigateToMethod(methodReference));
-
                         riderModel.Play.Advise(viewLifetime, b => unrealModel.Play.Set(b));
                     });
                 });
-        }
-
-        private void OnOpenedBlueprint(RdEditorModel unrealModel, BlueprintReference blueprintReference)
-        {
-            unrealModel.OpenBlueprint.Fire(blueprintReference);
         }
 
         public RdEditorModel GetCurrentEditorModel()
