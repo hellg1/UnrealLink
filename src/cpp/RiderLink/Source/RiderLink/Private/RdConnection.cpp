@@ -59,11 +59,16 @@ void RdConnection::init() {
 
 
     protocol = ProtocolFactory::create(scheduler, socketLifetime);
+
     
     unrealToBackendModel.connect(lifetime, protocol.Get());
     Jetbrains::EditorPlugin::UE4Library::serializersOwner.registerSerializersCore(
         unrealToBackendModel.get_serialization_context().get_serializers());
 
+    protocol->get_scheduler()->queue([this]() {
+       unrealToBackendModel.get_projectName().fire(FApp::GetProjectName()); 
+    });
+    
     unrealToBackendModel.get_openBlueprint().advise(
         lifetime, [this, MessageEndpoint](Jetbrains::EditorPlugin::BlueprintReference const& s) {
             try {
@@ -87,10 +92,7 @@ void RdConnection::init() {
 
 
     BluePrintProvider::OnBlueprintAdded.BindLambda([this](UBlueprint* Blueprint) {
-        scheduler.queue([this, Blueprint] {
-            unrealToBackendModel.get_onBlueprintAdded().fire(
-                Jetbrains::EditorPlugin::UClass(Blueprint->GetPathName()));
-        });
+        
     });
 }
 

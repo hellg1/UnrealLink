@@ -44,7 +44,7 @@ void FRiderLinkModule::StartupModule() {
     rdConnection.init();
 
     UE_LOG(FLogRiderLinkModule, Warning, TEXT("INIT START"));
-    rdConnection.scheduler.queue([this] {
+    // rdConnection.scheduler.queue([this] {
       rdConnection.unrealToBackendModel.get_play().advise(rdConnection.lifetime, [](bool shouldPlay) {
         if (!shouldPlay && GUnrealEd && GUnrealEd->PlayWorld) {
           GUnrealEd->RequestEndPlayMap();
@@ -58,23 +58,22 @@ void FRiderLinkModule::StartupModule() {
           }
         }
       });
-    });
+    // });
     static auto MessageEndpoint = FMessageEndpoint::Builder("FAssetEditorManager").Build();
     outputDevice.onSerializeMessage.BindLambda(
-        [this](const TCHAR* msg, ELogVerbosity::Type Type, const class FName& Name,
-               TOptional<double> Time) {
-            auto CS = FString(msg);            
+        [this, number = 0](const TCHAR* msg, ELogVerbosity::Type Type, const class FName& Name,
+               TOptional<double> Time) mutable  {
+            auto CS = FString(msg);
             if (Type != ELogVerbosity::SetColor) {
                 rdConnection.scheduler.queue(
-                    [this, message = FString(msg), Type, Name = Name.GetPlainNameString(),
-                        Time]() mutable {
+                    [this, message = FString(msg), Type, Name = Name.GetPlainNameString(), Time, &number]() mutable {
                         rd::optional<rd::DateTime> DateTime;
                         if (Time) {
                             DateTime = GetTimeNow(Time.GetValue());
                         }
                         auto MessageInfo = LogMessageInfo(Type, Name, DateTime);
                         rdConnection.unrealToBackendModel.get_unrealLog().fire(
-                            UnrealLogEvent{std::move(MessageInfo), std::move(message)});
+                                         UnrealLogEvent{number++, std::move(MessageInfo), std::move(message)});
                     });
             }
         });
