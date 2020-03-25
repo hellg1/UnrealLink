@@ -7,7 +7,6 @@ import com.jetbrains.rd.generator.nova.cpp.Cpp17Generator
 import com.jetbrains.rd.generator.nova.csharp.CSharp50Generator
 import com.jetbrains.rd.generator.nova.util.syspropertyOrInvalid
 import model.lib.ue4.UE4Library
-import model.lib.ue4.UE4Library.UClass
 import model.lib.ue4.UE4Library.FString
 import model.lib.ue4.UE4Library.UnrealLogEvent
 import java.io.File
@@ -27,14 +26,13 @@ object RdEditorRoot : Root(
 
 object RdEditorModel : Ext(RdEditorRoot) {
     init {
-        signal("unrealLog", UnrealLogEvent).async
+        signal("projectName", FString)
+        signal("unrealLog", UnrealLogEvent).readonly.async
         property("play", bool)
 
-        signal("openBlueprint", UE4Library.BlueprintReference)
+        signal("openBlueprint", UE4Library.BlueprintReference).write
 
-        signal("onBlueprintAdded", UClass).async
-        call("isBlueprintPathName", FString, bool)
-        call("getPathNameByPath", FString, FString.nullable)
+        call("isBlueprintPathName", FString, bool).write.async
 
         callback("AllowSetForegroundWindow", int, bool)
     }

@@ -20,8 +20,8 @@ class UnrealPane(val model: Any, val lifetime: Lifetime, val project: Project) :
 
     init {
         currentConsoleView = consoleView
-        currentConsoleView.allowHeavyFilters()
-        currentConsoleView.setUpdateFoldingsEnabled(true)
+        consoleView.allowHeavyFilters()
+        consoleView.setUpdateFoldingsEnabled(true)
 
         val actionGroup = DefaultActionGroup().apply {
 
