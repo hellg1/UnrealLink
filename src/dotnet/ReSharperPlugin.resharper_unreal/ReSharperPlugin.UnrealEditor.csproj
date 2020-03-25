@@ -11,8 +11,12 @@
 
   <ItemGroup>
     <Compile Include=".\obj\model\*\*.cs" />
+    <CsLex Include="Parsing\Lexer\UE4LogLexer.lex" />
+    <None Include="Parsing\Lexer\UE4LogLexer.lex" />
+    <!--<Compile Include="Parsing\Lexing\UE4LogLexer_lex.cs">
+      <DependentUpon>UE4LogLexer.lex</DependentUpon>
+    </Compile>-->
   </ItemGroup>
-
   <!-- TODO: uncomment for xaml icons -->
   <!--<ItemGroup>-->
     <!--<Reference Include="System.Xaml" />-->
