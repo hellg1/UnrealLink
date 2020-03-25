@@ -3,25 +3,24 @@ using System.Collections.Generic;
 using JetBrains.Annotations;
 using JetBrains.ProjectModel;
 using JetBrains.Rd.Tasks;
-using JetBrains.ReSharper.Feature.Services.Cpp.Util;
 using JetBrains.ReSharper.Psi.Cpp.UE4;
 using JetBrains.ReSharper.Resources.Shell;
 using JetBrains.Rider.Model;
 using JetBrains.Unreal.Lib;
-using JetBrains.Util.DataStructures;
 using JetBrains.Util;
+using JetBrains.Util.DataStructures;
 
 namespace ReSharperPlugin.UnrealEditor
 {
     [SolutionComponent]
     public class UnrealLinkResolver
     {
-        private readonly ISolution _solution;
-        private readonly ILogger _logger;
-        private readonly ICppUE4SolutionDetector _unrealEngineSolutionDetector;
         private static readonly CompactMap<char, char> PairSymbol = new CompactMap<char, char>();
-        private readonly Lazy<FileSystemPath> _ue4SourcesPath;
-        private readonly Lazy<List<FileSystemPath>> _possiblePaths;
+        private readonly ILogger myLogger;
+        private readonly Lazy<List<FileSystemPath>> myPossiblePaths;
+        private readonly ISolution mySolution;
+        private readonly Lazy<FileSystemPath> myUe4SourcesPath;
+        private readonly ICppUE4SolutionDetector myUnrealEngineSolutionDetector;
 
         static UnrealLinkResolver()
         {
@@ -34,11 +33,11 @@ namespace ReSharperPlugin.UnrealEditor
         public UnrealLinkResolver(ISolution solution, ILogger logger,
             ICppUE4SolutionDetector unrealEngineSolutionDetector)
         {
-            _solution = solution;
-            _logger = logger;
-            _unrealEngineSolutionDetector = unrealEngineSolutionDetector;
-            var solutionDirectory = _solution.SolutionDirectory;
-            _ue4SourcesPath = new Lazy<FileSystemPath>(() =>
+            mySolution = solution;
+            myLogger = logger;
+            myUnrealEngineSolutionDetector = unrealEngineSolutionDetector;
+            var solutionDirectory = mySolution.SolutionDirectory;
+            myUe4SourcesPath = new Lazy<FileSystemPath>(() =>
             {
                 using (ReadLockCookie.Create())
                 {
@@ -46,15 +45,15 @@ namespace ReSharperPlugin.UnrealEditor
                 }
             });
 
-            _possiblePaths = new Lazy<List<FileSystemPath>>(() =>
+            myPossiblePaths = new Lazy<List<FileSystemPath>>(() =>
                 new List<FileSystemPath>
                 {
-                    _ue4SourcesPath.Value,
-                    _ue4SourcesPath.Value.Parent,
-                    _ue4SourcesPath.Value / "Content",
-                    _ue4SourcesPath.Value / "Content" / "Editor",
-                    _ue4SourcesPath.Value / "Content" / "Editor" / "Slate", // FSlateStyleSet::ContentRootDir
-                    _ue4SourcesPath.Value / "Plugins",
+                    myUe4SourcesPath.Value,
+                    myUe4SourcesPath.Value.Parent,
+                    myUe4SourcesPath.Value / "Content",
+                    myUe4SourcesPath.Value / "Content" / "Editor",
+                    myUe4SourcesPath.Value / "Content" / "Editor" / "Slate", // FSlateStyleSet::ContentRootDir
+                    myUe4SourcesPath.Value / "Plugins",
 
                     solutionDirectory,
                     solutionDirectory / "Content",
@@ -65,19 +64,13 @@ namespace ReSharperPlugin.UnrealEditor
         [CanBeNull]
         private FileSystemPath ConvertToAbsolutePath(FileSystemPath path)
         {
-            if (path.IsAbsolute)
-            {
-                return path;
-            }
+            if (path.IsAbsolute) return path;
 
-            return _possiblePaths
+            return myPossiblePaths
                 .Value.SelectNotNull(possibleDir =>
                 {
                     var relativePath = path.AsRelative();
-                    if (relativePath == null || relativePath.IsEmpty)
-                    {
-                        return null;
-                    }
+                    if (relativePath == null || relativePath.IsEmpty) return null;
 
                     var candidate = possibleDir / relativePath;
                     return candidate.Exists == FileSystemPath.Existence.Missing ? null : candidate;
@@ -91,31 +84,24 @@ namespace ReSharperPlugin.UnrealEditor
             try
             {
                 var path = ConvertToAbsolutePath(FileSystemPath.Parse(input));
-                if (path == null)
-                {
-                    return null;
-                }
+                if (path == null) return null;
 
                 if (path.ExtensionNoDot == "umap")
-                {
                     //todo
                     return null;
-                }
 
                 if (path.ExtensionNoDot == "uasset")
-                {
                     return new LinkResponseBlueprint(new FString(path.ToUri().AbsolutePath), range);
-                }
 
                 return new LinkResponseFilePath(new FString(path.ToUri().AbsolutePath), range);
             }
             catch (InvalidPathException e)
             {
-                _logger.Warn(e);
+                myLogger.Warn(e);
             }
             catch (Exception e)
             {
-                _logger.Error(e, "occured while trying parse full path");
+                myLogger.Error(e, "occured while trying parse full path");
             }
 
             return null;
@@ -139,10 +125,7 @@ namespace ReSharperPlugin.UnrealEditor
             {
                 l = 0;
                 r = s.Length;
-                if (s.EndsWith("."))
-                {
-                    --r;
-                }
+                if (s.EndsWith(".")) --r;
 
                 if (PairSymbol.TryGetValue(s[r - 1], out var value))
                 {
@@ -158,16 +141,10 @@ namespace ReSharperPlugin.UnrealEditor
             var range = new StringRange(left, right);
 
             var fullPath = TryParseFullPath(squeezed, range);
-            if (fullPath != null)
-            {
-                return fullPath;
-            }
+            if (fullPath != null) return fullPath;
 
             var fullName = TryParseFullName(squeezed, range, isBlueprintPathName);
-            if (fullName != null)
-            {
-                return fullName;
-            }
+            if (fullName != null) return fullName;
 
 
             return new LinkResponseUnresolved();
