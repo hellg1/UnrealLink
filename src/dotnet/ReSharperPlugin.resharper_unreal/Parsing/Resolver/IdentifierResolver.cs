@@ -153,7 +153,7 @@ namespace ReSharperPlugin.UnrealEditor.Parsing.Resolver
                     var symbolsByShortName = GetSymbolsByShortName(s);
                     var classSymbol = symbolsByShortName
                         .OfType<CppClassSymbol>()
-                        .Where(symbol => symbol.Parent.IsNamespaceSymbol())
+                        .Where(symbol => ReferenceEquals(symbol.Parent.Name.Name, CppGlobalNamespaceId.INSTANCE))
                         .Where(symbol => symbol.Tag == CppClassTag.CLASS_TAG ||
                                          symbol.Tag == CppClassTag.STRUCT_TAG)
                         .SingleOrNull();
