@@ -10,11 +10,12 @@
 #include "MessageEndpointBuilder.h"
 #include "UnrealEdGlobals.h"
 
-#include "EditorViewportClient.h"
 #if ENGINE_MINOR_VERSION < 24
 #include "ILevelViewport.h"
+#include "LevelEditorViewport.h"
 #else
 #include "IAssetViewport.h"
+#include "EditorViewportClient.h"
 #endif
 
 #include "BlueprintProvider.h"
@@ -105,8 +106,13 @@ static void RequestPlay(int mode) {
   const FRotator *StartRotation = nullptr;
   if (!atPlayerStart && slateApplication && ActiveLevelViewport.IsValid() &&
       slateApplication->FindWidgetWindow(ActiveLevelViewport->AsWidget()).IsValid()) {
+#if ENGINE_MINOR_VERSION < 24
+    StartLocation = &ActiveLevelViewport->GetLevelViewportClient().GetViewLocation();
+    StartRotation = &ActiveLevelViewport->GetLevelViewportClient().GetViewRotation();
+#else
     StartLocation = &ActiveLevelViewport->GetAssetViewportClient().GetViewLocation();
     StartRotation = &ActiveLevelViewport->GetAssetViewportClient().GetViewRotation();
+#endif
   }
 
   if (playMode == PlayMode_InEditorFloating) {
@@ -189,7 +195,7 @@ void FRiderLinkModule::StartupModule() {
           GUnrealEd->PlayWorld->bDebugFrameStepExecution = true;
           GUnrealEd->PlayWorld->bDebugPauseExecution = false;
     });
-  });
+  // }
 
   FEditorDelegates::BeginPIE.AddLambda([this](const bool started) {
     rdConnection.scheduler.queue([this]() {
@@ -233,11 +239,13 @@ void FRiderLinkModule::StartupModule() {
     rdConnection.unrealToBackendModel.get_playMode().set(ModeFromSettings());
   });
 
+  static int number = 0;
+  
   static auto MessageEndpoint =
       FMessageEndpoint::Builder("FAssetEditorManager").Build();
   outputDevice.onSerializeMessage.BindLambda(
       [this](const TCHAR *msg, ELogVerbosity::Type Type,
-             const class FName &Name, TOptional<double> Time) {
+             const class FName &Name, TOptional<double> Time) mutable {        
         auto CS = FString(msg);
         if (Type != ELogVerbosity::SetColor) {
           rdConnection.scheduler.queue([this, message = FString(msg), Type,
@@ -249,7 +257,7 @@ void FRiderLinkModule::StartupModule() {
             }
             auto MessageInfo = LogMessageInfo(Type, Name, DateTime);
             rdConnection.unrealToBackendModel.get_unrealLog().fire(
-                UnrealLogEvent{std::move(MessageInfo), std::move(message)});
+                UnrealLogEvent{++number, std::move(MessageInfo), std::move(message)});
           });
         }
       });

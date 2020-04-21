@@ -14,6 +14,7 @@ using JetBrains.ReSharper.Features.XamlRendererHost.Preview;
 using JetBrains.Rider.Model;
 using JetBrains.Unreal.Lib;
 using JetBrains.Util;
+using ReSharperPlugin.UnrealEditor;
 using RiderPlugin.UnrealLink.PluginInstaller;
 
 namespace RiderPlugin.UnrealLink
@@ -23,9 +24,8 @@ namespace RiderPlugin.UnrealLink
     {
         private readonly IScheduler myDispatcher;
         private readonly ILogger myLogger;
+        private readonly UnrealToolWindowHost myToolWindowHost;
         private readonly UnrealHost myUnrealHost;
-        private readonly UnrealLinkResolver myLinkResolver;
-        private readonly EditorNavigator myEditorNavigator;
         private readonly ViewableProperty<RdEditorModel> myEditorModel = new ViewableProperty<RdEditorModel>(null);
 
         private bool PlayedFromUnreal = false;
@@ -37,8 +37,8 @@ namespace RiderPlugin.UnrealLink
         private SequentialLifetimes myConnectionLifetimeProducer;
 
         public RiderBackendToUnrealEditor(Lifetime lifetime, IShellLocks locks, IScheduler dispatcher, ILogger logger,
-            UnrealHost unrealHost, UnrealLinkResolver linkResolver, EditorNavigator editorNavigator,
-            UnrealPluginDetector pluginDetector)
+            UnrealHost unrealHost,
+            UnrealPluginDetector pluginDetector, UnrealToolWindowHost toolWindowHost)
         {
             myComponentLifetime = lifetime;
             myLocks = locks;
@@ -46,8 +46,7 @@ namespace RiderPlugin.UnrealLink
             myDispatcher = dispatcher;
             myLogger = logger;
             myUnrealHost = unrealHost;
-            myLinkResolver = linkResolver;
-            myEditorNavigator = editorNavigator;
+            myToolWindowHost = toolWindowHost;
 
             myLogger.Info("RiderBackendToUnrealEditor building started");
 
@@ -128,9 +127,11 @@ namespace RiderPlugin.UnrealLink
             });
         }
 
-        void OnMessageReceived(RdRiderModel riderModel, UnrealLogEvent message)
+        private void OnMessageReceived(UnrealLogEvent message, UnrealTabModel unrealTabModel,
+            RdEditorModel unrealModel, RdRiderModel riderModel)
         {
-            riderModel.UnrealLog.Fire(message);
+            unrealTabModel.UnrealPane.UnrealLog(message);
+            myToolWindowHost.Highlight(message, unrealTabModel, unrealModel);
         }
 
         private void ResetModel(Lifetime lf, IProtocol protocol)
@@ -144,22 +145,18 @@ namespace RiderPlugin.UnrealLink
             var unrealModel = new RdEditorModel(lf, protocol);
             UE4Library.RegisterDeclaredTypesSerializers(unrealModel.SerializationContext.Serializers);
 
+            var unrealTabModel = myToolWindowHost.AddTab("Default", unrealModel);
+            
+            unrealModel.UnrealLog.Advise(lf,
+                logEvent => myUnrealHost.PerformModelAction(riderModel =>
+                    OnMessageReceived(logEvent, unrealTabModel, unrealModel, riderModel)));
+            
             unrealModel.AllowSetForegroundWindow.Set((lt, pid) =>
             {
                 return myUnrealHost.PerformModelAction(riderModel =>
                     riderModel.AllowSetForegroundWindow.Start(lt, pid)) as RdTask<bool>;
             });
 
-            unrealModel.UnrealLog.Advise(lf,
-                logEvent =>
-                {
-                    myUnrealHost.PerformModelAction(riderModel => { OnMessageReceived(riderModel, logEvent); });
-                });
-
-            unrealModel.OnBlueprintAdded.Advise(lf, blueprintClass =>
-            {
-                //todo
-            });
 
             unrealModel.Play.Advise(lf, val =>
             {
@@ -198,24 +195,6 @@ namespace RiderPlugin.UnrealLink
 
             myUnrealHost.PerformModelAction(riderModel =>
             {
-                riderModel.FilterLinkCandidates.Set((lifetime, candidates) =>
-                    RdTask<ILinkResponse[]>.Successful(candidates
-                        .Select(request => myLinkResolver.ResolveLink(request, unrealModel.IsBlueprintPathName))
-                        .AsArray()));
-                riderModel.IsMethodReference.Set((lifetime, methodReference) =>
-                {
-                    var b = myEditorNavigator.IsMethodReference(methodReference);
-                    return RdTask<bool>.Successful(b);
-                });
-                riderModel.OpenBlueprint.Advise(lf, blueprintReference =>
-                    OnOpenedBlueprint(unrealModel, blueprintReference));
-
-                riderModel.NavigateToClass.Advise(lf,
-                    uClass => myEditorNavigator.NavigateToClass(uClass));
-
-                riderModel.NavigateToMethod.Advise(lf,
-                    methodReference => myEditorNavigator.NavigateToMethod(methodReference));
-
                 riderModel.Play.Advise(lf, val =>
                 {
                     if (PlayedFromUnreal)
@@ -252,11 +231,6 @@ namespace RiderPlugin.UnrealLink
             if (myComponentLifetime.IsAlive)
                 myLocks.ExecuteOrQueueEx(myComponentLifetime, "setModel",
                     () => { myEditorModel.SetValue(unrealModel); });
-        }
-
-        private void OnOpenedBlueprint(RdEditorModel unrealModel, BlueprintReference blueprintReference)
-        {
-            unrealModel.OpenBlueprint.Fire(blueprintReference);
         }
 
         public RdEditorModel GetCurrentEditorModel()

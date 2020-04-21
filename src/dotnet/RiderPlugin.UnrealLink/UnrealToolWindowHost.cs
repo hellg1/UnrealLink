@@ -18,6 +18,7 @@ using ReSharperPlugin.UnrealEditor.Parsing.Highlighting;
 using ReSharperPlugin.UnrealEditor.Parsing.Node;
 using ReSharperPlugin.UnrealEditor.Parsing.Parser;
 using ReSharperPlugin.UnrealEditor.Parsing.Resolver;
+using RiderPlugin.UnrealLink;
 
 namespace ReSharperPlugin.UnrealEditor
 {

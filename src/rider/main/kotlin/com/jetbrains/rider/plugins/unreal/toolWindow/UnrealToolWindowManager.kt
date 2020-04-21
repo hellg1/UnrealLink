@@ -34,8 +34,9 @@ class UnrealToolWindowManager(project: Project,
                     }
                 }
             }
-        host.model.isConnectedToUnrealEditor.advise(componentLifetime) {
-            if(it) unrealToolWindowContextFactory.showTabForNewSession()
+//            host.model.isConnectedToUnrealEditor.advise(componentLifetime) {
+//                if (it) unrealToolWindowContextFactory.showTabForNewSession()
+//            }
         }
     }
 }
