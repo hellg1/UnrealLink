@@ -88,8 +88,6 @@ object RdRiderModel : Ext(SolutionModel.Solution) {
         property("playMode", int)
         signal("frameSkip", bool)
 
-        property("play", bool)
-//        signal("hyperLink", UnrealLogHighlighter)
         field("toolWindowModel", ToolWindowModel)
 
         callback("AllowSetForegroundWindow", int, bool)

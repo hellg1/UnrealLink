@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <Compile Include=".\obj\model\*\*.cs" />
+    <CsLex Include="Parsing\Lexer\UE4LogLexer.lex" />
+    <None Include="Parsing\Lexer\UE4LogLexer.lex" />
   </ItemGroup>
 
   <Import Project="$(DotNetSdkPath)\Build\SubplatformReference.ReSharperCpp_RiderPlugin.Props" />
