@@ -16,6 +16,9 @@
     <component><implementation-class>com.jetbrains.rider.plugins.unreal.toolWindow.UnrealToolWindowManager</implementation-class></component>
     <component><implementation-class>com.jetbrains.rider.plugins.unreal.notifications.OutOfSyncEditorNotification</implementation-class></component>
     <component><implementation-class>com.jetbrains.rider.plugins.unreal.UnrealLogViewerManager</implementation-class></component>
+      <component>
+          <implementation-class>com.jetbrains.rider.plugins.unreal.UnrealToolWindowHost</implementation-class>
+      </component>
   </project-components>
 
   <extensions defaultExtensionNs="com.intellij">

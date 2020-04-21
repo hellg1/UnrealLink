@@ -97,24 +97,13 @@ object UE4Library : Root(
     }
 
     val UnrealLogEvent = structdef("UnrealLogEvent") {
+        field("number", int)
         field("info", LogMessageInfo)
         field("text", FString)
     }
 
-    /*@Suppress("unused")
-    private val LogMessageEvent = structdef("LogMessageEvent") extends LogEvent {
-        field("message", FString)
-    }*/
-
     val UClass = structdef("UClass") {
         field("name", FString)
-    }
-
-    val BlueprintFunction = structdef("BlueprintFunction") {
-        field("class", UClass)
-        field("name", FString)
-
-        const("separator", string, ":")
     }
 
     //region Script Call Stack
@@ -169,13 +158,10 @@ object UE4Library : Root(
 */
 
     //endregion
-    val BlueprintHighlighter = structdef("BlueprintHighlighter") {
-        field("begin", int)
-        field("end", int)
-    }
-
     val BlueprintReference = structdef("BlueprintReference") {
         field("pathName", FString)
+
+        const("separator", string, ".")
     }
 }
 

@@ -43,10 +43,9 @@ namespace RiderPlugin.UnrealLink
 
             action(myModel);
         }
-        
+
         public T PerformModelAction<T>(Func<RdRiderModel, T> action)
         {
-            
             if (myIsInTests)
                 return default;
 

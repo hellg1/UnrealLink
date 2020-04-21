@@ -7,15 +7,17 @@ import com.jetbrains.rd.util.info
 import com.jetbrains.rd.util.reactive.ISignal
 import com.jetbrains.rider.model.BlueprintReference
 
-class BlueprintClassHyperLinkInfo(private val navigation: ISignal<BlueprintReference>, private val struct: BlueprintReference) : HyperlinkInfo {
+class BlueprintHyperLinkInfo(
+        private val navigation: ISignal<BlueprintReference>,
+        private val pathName: BlueprintReference
+) : HyperlinkInfo {
     companion object {
-        val logger = getLogger<BlueprintClassHyperLinkInfo>()
+        val logger = getLogger<BlueprintHyperLinkInfo>()
     }
 
     override fun navigate(project: Project) {
-        logger.info { "navigate by $struct" }
+        logger.info { "navigate by BlueprintHyperLinkInfo:$pathName" }
 
-        navigation.fire(struct)
+        navigation.fire(pathName)
     }
-
 }

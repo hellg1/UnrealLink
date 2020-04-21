@@ -5,15 +5,19 @@ import com.intellij.openapi.project.Project
 import com.jetbrains.rd.util.getLogger
 import com.jetbrains.rd.util.info
 import com.jetbrains.rd.util.reactive.ISignal
-import com.jetbrains.rider.model.BlueprintFunction
+import com.jetbrains.rider.model.BlueprintReference
 
-class BlueprintFunctionHyperLinkInfo(private val navigation: ISignal<BlueprintFunction>, private val function: BlueprintFunction) : HyperlinkInfo {
+@Suppress("unused")
+class BlueprintNodeHyperLinkInfo(
+        private val navigation: ISignal<BlueprintReference>,
+        private val function: BlueprintReference
+) : HyperlinkInfo {
     companion object {
-        val logger = getLogger<BlueprintFunctionHyperLinkInfo>()
+        val logger = getLogger<BlueprintNodeHyperLinkInfo>()
     }
 
     override fun navigate(project: Project) {
-        logger.info { "navigate by $function" }
+        logger.info { "navigate by BlueprintNodeHyperLinkInfo:$function" }
 
         navigation.fire(function)
     }

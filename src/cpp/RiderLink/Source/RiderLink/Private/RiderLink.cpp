@@ -108,7 +108,7 @@ static void RequestPlay(int mode) {
     StartLocation = &ActiveLevelViewport->GetAssetViewportClient().GetViewLocation();
     StartRotation = &ActiveLevelViewport->GetAssetViewportClient().GetViewRotation();
   }
-  
+
   if (playMode == PlayMode_InEditorFloating) {
     GUnrealEd->RequestPlaySession(atPlayerStart, nullptr, false, StartLocation);
   } else if (playMode == PlayMode_InVR) {
@@ -139,7 +139,7 @@ static int ModeFromSettings() {
       GetMutableDefault<ULevelEditorPlaySettings>();
   if (!PlayInSettings)
     return 0;
-  
+
   int32 numberOfClients;
   bool netDedicated;
   PlayInSettings->GetPlayNumberOfClients(numberOfClients);
@@ -163,7 +163,7 @@ void FRiderLinkModule::StartupModule() {
   slateApplication = &FSlateApplication::Get();
 
   UE_LOG(FLogRiderLinkModule, Warning, TEXT("INIT START"));
-  rdConnection.scheduler.queue([this] {
+  //rdConnection.scheduler.queue([this] {
     rdConnection.unrealToBackendModel.get_play().advise(
         rdConnection.lifetime, [this](int playValue) {
           if (PlayFromUnreal)
