@@ -13,5 +13,10 @@
     <Compile Include=".\obj\model\*\*.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Ini\IniLanguage\ini.lex" />
+    <CsLex Include="Ini\IniLanguage\ini.lex" />
+  </ItemGroup>
+
   <Import Project="$(DotNetSdkPath)\Build\SubplatformReference.ReSharperCpp_RiderPlugin.Props" />
 </Project>
