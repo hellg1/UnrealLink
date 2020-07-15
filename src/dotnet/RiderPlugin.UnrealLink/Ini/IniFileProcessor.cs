@@ -17,13 +17,18 @@ namespace RiderPlugin.UnrealLink.Ini
     [SolutionComponent]
     public class IniFileProcessor
     {
-        private static HashSet<string> platformNames = new HashSet<string> { "android", "hololens", "ios", "linux", "linuxaarch64", "lumin", "mac", "tvos", "unix", "windows" };
+        private static HashSet<string> platformNames = new HashSet<string>
+        {
+            IniCachedProperty.DefaultPlatform, "android", "hololens", "ios", "linux", "linuxaarch64", "lumin", "mac", "tvos", "unix", "windows"
+        };
 
         private Dictionary<string, ClassDefaultsCache> perCategoryCache = new Dictionary<string, ClassDefaultsCache>();
         
         private ILogger myLogger;
         private UnrealPluginDetector myPluginDetector;
         private ISolution mySolution;
+
+        private IProject mainProject;
     
         public IniFileProcessor(ISolution solution, ILogger logger, UnrealPluginDetector pluginDetector)
         {
@@ -46,7 +51,7 @@ namespace RiderPlugin.UnrealLink.Ini
             
             myLogger.LogMessage(LoggingLevel.INFO, $"UE4 vers: {myPluginDetector.UnrealVersion}");
             var engineProject = mySolution.GetProjectsByName("UE4").FirstNotNull();
-            var mainProject = mySolution.GetProjectsByName(mySolution.Name).FirstNotNull();
+            mainProject = mySolution.GetProjectsByName(mySolution.Name).FirstNotNull();
             if (engineProject == null)
             {
                 myLogger.LogMessage(LoggingLevel.WARN,  "UE4 project is not found");
@@ -61,39 +66,62 @@ namespace RiderPlugin.UnrealLink.Ini
                 myLogger.LogMessage(LoggingLevel.WARN, "Config directory is not found");
             }
 
-            var iniFiles = GetIniFiles(projectConfigDirectory);
+            foreach (var platform in platformNames)
+            {
+                ProcessPlatform(projectConfigDirectory, platform);
+            }
+
+            var classDefaults = perCategoryCache["game"].GetClassDefaults("MyGenerator");
+            var classProperty = perCategoryCache["game"].GetClassProperty("MyGenerator", "wallProbability");
+            var classDefaultValue = perCategoryCache["game"].GetClassDefaultValue("MyGenerator", "floorProbability","android");
+        }
+
+        private void ProcessPlatform(FileSystemPath projectConfigDirectory, string platformName)
+        {
+            var platformDirectory = projectConfigDirectory.Clone();
+            if (platformName != IniCachedProperty.DefaultPlatform)
+            {
+                platformDirectory = projectConfigDirectory.AddSuffix("/" + platformName);
+            }
+
+            if (!platformDirectory.ExistsDirectory)
+            {
+                return;
+            }
             
-            var defaultFiles = new List<FileSystemPath>();
-            var projectFiles = GetIniFiles(projectConfigDirectory);
+            var filesToProcess = new List<FileSystemPath>();
+            var projectFiles = GetIniFiles(platformDirectory);
             
             foreach (var file in projectFiles)
             {
                 var iniFile = file.GetAbsolutePath();
                 var filename = iniFile.NameWithoutExtension.ToLower();
-                if (filename.StartsWith("default"))
+                if (filename.StartsWith(platformName))
                 {
-                    defaultFiles.Add(iniFile);
+                    filesToProcess.Add(iniFile);
                 } 
             }
 
-            foreach (var file in defaultFiles)
+            foreach (var file in filesToProcess)
             {
                 var filename = file.NameWithoutExtension.ToLower();
                 var category = filename.Substring(7);
                 
                 var visitor = new IniVisitor();
-                var cache = new ClassDefaultsCache(mainProject.Name);
+
+                if (!perCategoryCache.ContainsKey(category))
+                {
+                    perCategoryCache.Add(category, new ClassDefaultsCache(mainProject.Name));
+                }
+
+                var cache = perCategoryCache[category];
+                cache.SetupPlatform(platformName);
                 visitor.AddCacher(cache);
                 
                 ParseIniFile(file, visitor);
-
-                if (!cache.IsEmpty)
-                {
-                    perCategoryCache.Add(category, cache);
-                }
             }
         }
-
+        
         private List<FileSystemPath>[] GetOrderedFiles(FileSystemPath projectConfigDirectory, FileSystemPath engineConfigDirectory)
         {
             var orderedFiles = new List<FileSystemPath>[6];

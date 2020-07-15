@@ -14,6 +14,8 @@ namespace RiderPlugin.UnrealLink.Ini
         /// <param name="value">Property's value</param>
         void ProcessProperty(FileSystemPath file, string section, string key, IniPropertyOperators op, IniCachedItem value);
 
+        void SetupPlatform(string platform);
+        
         bool IsEmpty { get; }
     }
 }

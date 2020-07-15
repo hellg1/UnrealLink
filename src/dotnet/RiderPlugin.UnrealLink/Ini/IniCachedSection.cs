@@ -11,16 +11,16 @@ namespace RiderPlugin.UnrealLink.Ini
     {
         private Dictionary<string, IniCachedProperty> properties = new Dictionary<string, IniCachedProperty>();
 
-        public void ModifyProperty(string key, IniPropertyOperators op, IniCachedItem newValue)
+        public void ModifyProperty(string key, IniPropertyOperators op, IniCachedItem newValue, string platform)
         {
             if (properties.ContainsKey(key))
             {
-                properties[key].ModifyValue(newValue, op);
+                properties[key].ModifyValue(newValue, op, platform);
             }
             else
             {
                 var prop = new IniCachedProperty(key);
-                prop.ModifyValue(newValue, op);
+                prop.ModifyValue(newValue, op, platform);
                 properties.Add(key, prop);
             }
         }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using JetBrains.Util;
 
@@ -7,7 +8,7 @@ namespace RiderPlugin.UnrealLink.Ini
     /// <summary>
     /// Represents property's value
     /// </summary>
-    public class IniCachedItem
+    public class IniCachedItem : ICloneable
     {
         public IniCachedItem()
         {
@@ -21,7 +22,7 @@ namespace RiderPlugin.UnrealLink.Ini
         /// <summary>
         /// Does value contains multiple fields (i.e. object)
         /// </summary>
-        public bool IsObject { get; set; }
+        public bool IsObject { get; private set; }
 
         public string Value
         {
@@ -47,18 +48,39 @@ namespace RiderPlugin.UnrealLink.Ini
             
             var res = new StringBuilder();
             res.Append("(");
+            string comma = "";
             
             foreach (var item in values)
             {
+                res.Append(comma);
                 res.Append(item.Key);
                 res.Append("=");
                 res.Append(item.Value.ConstructValue());
-                res.Append(",");
+                comma = ",";
             }
-
+            
             res.Append(")");
             
             return res;
+        }
+
+        public object Clone()
+        {
+            var clone = new IniCachedItem {LastFile = LastFile};
+
+            if (IsObject)
+            {
+                foreach (var it in values)
+                {
+                    clone.AddValue(it.Key, it.Value.Clone() as IniCachedItem);
+                }
+            }
+            else
+            {
+                clone.Value = myValue;
+            }
+
+            return clone;
         }
     }
 }

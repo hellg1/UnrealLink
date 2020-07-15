@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Util;
 
 namespace RiderPlugin.UnrealLink.Ini
@@ -10,61 +11,81 @@ namespace RiderPlugin.UnrealLink.Ini
     {
         public IniCachedProperty(string key)
         {
-            Key = key;
         }
+
+        public const string DefaultPlatform = "default";
         
-        /// <summary>
-        /// Property's name
-        /// </summary>
-        public string Key { get; }
+        //private List<IniCachedItem> generalValues = new List<IniCachedItem>();
+        private Dictionary<string, List<IniCachedItem>> perPlatformValues = new Dictionary<string, List<IniCachedItem>> { { DefaultPlatform, new List<IniCachedItem>()} };
 
-        private List<IniCachedItem> values = new List<IniCachedItem>();
-
-        public void ModifyValue(IniCachedItem newValue, IniPropertyOperators op)
+        public void ModifyValue(IniCachedItem newValue, IniPropertyOperators op, string platform = DefaultPlatform)
         {
+            if (!perPlatformValues.ContainsKey(platform))
+            {
+                perPlatformValues.Add(platform, perPlatformValues[DefaultPlatform]
+                    .Select(item => item.Clone() as IniCachedItem).ToList());
+            }
+
             switch (op)
             {
                 case IniPropertyOperators.New:
                 {
-                    values = new List<IniCachedItem> { newValue };
+                    perPlatformValues[platform] = new List<IniCachedItem> { newValue };
                     break;
                 }
                 case IniPropertyOperators.Add:
                 {
-                    values.Add(newValue);
+                    perPlatformValues[platform].Add(newValue);
                     break;
                 }
                 case IniPropertyOperators.AddWithCheck:
                 {
-                    if (!values.Contains(newValue)) {
-                        values.Add(newValue);
+                    if (!perPlatformValues[platform].Contains(newValue)) {
+                        perPlatformValues[platform].Add(newValue);
                     }
                     break;
                 }
                 case IniPropertyOperators.RemoveLn:
                 {
-                    values.RemoveAll(it => it == newValue);
+                    perPlatformValues[platform].RemoveAll(it => it == newValue);
                     break;
                 }
                 case IniPropertyOperators.RemoveProperty:
                 {
-                    values = new List<IniCachedItem>();
+                    perPlatformValues[platform] = new List<IniCachedItem>();
                     break;
                 }
             }
         }
 
-        public IniCachedItem[] GetValues()
+        public IniCachedItem[] GetValues(string platform = DefaultPlatform)
         {
-            if (IsEmpty)
+            if (!perPlatformValues.ContainsKey(platform))
             {
-                return null;
+                platform = DefaultPlatform;
+            }
+            
+            if (perPlatformValues.ContainsKey(platform))
+            {
+                return perPlatformValues[platform].ToArray();
             }
 
-            return values.ToArray();
+            return null;
         }
 
-        public bool IsEmpty => values.IsEmpty();
+        public bool IsEmpty
+        {
+            get
+            {
+                var res = true;
+                foreach (var platform in perPlatformValues)
+                {
+                    res &= platform.Value.IsEmpty();
+                }
+
+                return res;
+            }
+        }
     }
 
     public enum IniPropertyOperators

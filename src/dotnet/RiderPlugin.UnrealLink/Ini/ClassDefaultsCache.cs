@@ -12,8 +12,10 @@ namespace RiderPlugin.UnrealLink.Ini
             sectionPrefix = "/Script/" + projectName;
         }
 
-        private string sectionPrefix;
+        private readonly string sectionPrefix;
 
+        private string curPlatform = IniCachedProperty.DefaultPlatform;
+        
         private Dictionary<string, IniCachedSection> sections = new Dictionary<string,IniCachedSection>();
         
         public void ProcessProperty(FileSystemPath file, string section, string key, IniPropertyOperators op, IniCachedItem value)
@@ -23,18 +25,25 @@ namespace RiderPlugin.UnrealLink.Ini
                 return;
             }
 
-            if (sections.ContainsKey(section))
+            var className = section.Substring(sectionPrefix.Length + 1);
+            
+            if (sections.ContainsKey(className))
             {
-                sections[section].ModifyProperty(key, op, value);
+                sections[className].ModifyProperty(key, op, value, curPlatform);
             }
             else
             {
                 var cachedSection = new IniCachedSection();
-                cachedSection.ModifyProperty(key, op, value);
-                sections.Add(section, cachedSection);
+                cachedSection.ModifyProperty(key, op, value, curPlatform);
+                sections.Add(className, cachedSection);
             }
         }
 
+        public void SetupPlatform(string platform)
+        {
+            curPlatform = platform;
+        }
+        
         public IniCachedSection GetClassDefaults(string className)
         {
             if (sections.ContainsKey(className))
@@ -56,20 +65,15 @@ namespace RiderPlugin.UnrealLink.Ini
             return classSection.GetProperty(propertyName);
         }
 
-        public string GetClassDefaultValue(string className, string propertyName)
+        public string GetClassDefaultValue(string className, string propertyName, string platform = IniCachedProperty.DefaultPlatform)
         {
             if (!sections.ContainsKey(className))
             {
                 return null;
             }
 
-            var vals = sections[className].GetProperty(propertyName).GetValues();
+            var vals = sections[className].GetProperty(propertyName).GetValues(platform);
             if (vals.IsEmpty())
-            {
-                return null;
-            }
-
-            if (vals.Last().IsObject)
             {
                 return null;
             }
