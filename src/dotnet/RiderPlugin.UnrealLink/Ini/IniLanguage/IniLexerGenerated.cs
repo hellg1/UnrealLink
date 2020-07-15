@@ -29,6 +29,11 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
         {
             if (isMultiline)
             {
+                if (tokenNodeType == IniTokenType.WHITESPACE)
+                {
+                    return currentTokenType = tokenNodeType;
+                }
+            
                 isMultiline = false;
                 if (tokenNodeType == IniTokenType.NEWLINE)
                 {
@@ -42,8 +47,7 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
             {
                 yybegin(YYINITIAL);
             }
-
-            if (tokenNodeType == IniTokenType.QUOTE_MK)
+            else if (tokenNodeType == IniTokenType.QUOTE_MK)
             {
                 if (yy_lexical_state == YY_IN_STRING)
                 {
@@ -54,6 +58,10 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
                     stateBeforeString = yy_lexical_state;
                     yybegin(YY_IN_STRING);
                 }
+            }
+            else if (tokenNodeType == IniTokenType.LINESPLITTER)
+            {
+                isMultiline = true;
             }
 
             return currentTokenType = tokenNodeType;

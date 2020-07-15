@@ -4,6 +4,9 @@ using JetBrains.Util;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
+    /// <summary>
+    /// Represents ini file section
+    /// </summary>
     public class IniCachedSection
     {
         private Dictionary<string, IniCachedProperty> properties = new Dictionary<string, IniCachedProperty>();
@@ -22,11 +25,11 @@ namespace RiderPlugin.UnrealLink.Ini
             }
         }
 
-        public IniCachedProperty GetProperty(string property)
+        public IniCachedProperty GetProperty(string propertyName)
         {
-            if (properties.ContainsKey(property))
+            if (properties.ContainsKey(propertyName))
             {
-                return properties[property];
+                return properties[propertyName];
             }
             
             return null;

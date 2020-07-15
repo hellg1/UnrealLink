@@ -4,6 +4,9 @@ using RiderPlugin.UnrealLink.Ini.IniLanguage;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
+    /// <summary>
+    /// Class for storing ActionMappings and AxisMappings (i.e. key bindings)
+    /// </summary>
     public class KeyBindingsCache : IIniCacher
     {
         public KeyBindingsCache()

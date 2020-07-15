@@ -9,9 +9,12 @@ using RiderPlugin.UnrealLink.Ini.IniLanguage;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
+    /// <summary>
+    /// Class which goes through syntax tree
+    /// </summary>
     public class IniVisitor
     {
-        private List<IIniCacher> processors = new List<IIniCacher>();
+        private List<IIniCacher> cachers = new List<IIniCacher>();
         private string curSection = "INVALID_SECTION";
 
         private IFile myFile;
@@ -21,16 +24,22 @@ namespace RiderPlugin.UnrealLink.Ini
         {
         }
 
+        /// <summary>
+        /// Adds custom cache builder
+        /// </summary>
         public void AddCacher(IIniCacher cacher)
         {
-            processors.Add(cacher);
+            cachers.Add(cacher);
         }
         
-        public void VisitFile(IFile file, FileSystemPath filename)
+        /// <summary>
+        /// Processes file
+        /// </summary>
+        public void VisitFile(IFile file, FileSystemPath filepath)
         {
             curSection = "INVALID_SECTION";
             myFile = file;
-            myFilename = filename;
+            myFilename = filepath;
             
             foreach (var node in myFile.Children())
             {
@@ -93,7 +102,7 @@ namespace RiderPlugin.UnrealLink.Ini
 
                 val.LastFile = myFilename;
 
-                foreach (var proc in processors)
+                foreach (var proc in cachers)
                 {
                     proc.ProcessProperty(myFilename, curSection,  curProperty, op, val);
                 }

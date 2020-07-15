@@ -3,6 +3,9 @@ using JetBrains.Util;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
+    /// <summary>
+    /// Represents property in ini file
+    /// </summary>
     public class IniCachedProperty
     {
         public IniCachedProperty(string key)
@@ -10,6 +13,9 @@ namespace RiderPlugin.UnrealLink.Ini
             Key = key;
         }
         
+        /// <summary>
+        /// Property's name
+        /// </summary>
         public string Key { get; }
 
         private List<IniCachedItem> values = new List<IniCachedItem>();
@@ -61,18 +67,6 @@ namespace RiderPlugin.UnrealLink.Ini
         public bool IsEmpty => values.IsEmpty();
     }
 
-    public class ValueInfo
-    {
-        public ValueInfo(FileSystemPath file)
-        {
-            Count = 1;
-            LastFile = file;
-        }
-        
-        public int Count;
-        public FileSystemPath LastFile;
-    }
-    
     public enum IniPropertyOperators
     {
         New,
