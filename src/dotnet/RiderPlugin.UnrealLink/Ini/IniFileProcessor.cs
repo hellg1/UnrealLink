@@ -14,6 +14,11 @@ using RiderPlugin.UnrealLink.PluginInstaller;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
+    
+    /// <summary>
+    /// Class for processing ini files from project directory
+    /// TODO: make API for accessing cached data
+    /// </summary>
     [SolutionComponent]
     public class IniFileProcessor
     {
@@ -29,37 +34,34 @@ namespace RiderPlugin.UnrealLink.Ini
         private ISolution mySolution;
 
         private IProject mainProject;
-    
+        private IProject engineProject;
+
         public IniFileProcessor(ISolution solution, ILogger logger, UnrealPluginDetector pluginDetector)
         {
             myLogger = logger;
             myPluginDetector = pluginDetector;
             mySolution = solution;
-            
-            myLogger.Info("test message");
 
-            pluginDetector.InstallInfoProperty.PropertyChanged += CheckForUE;
+            pluginDetector.InstallInfoProperty.PropertyChanged += Startup;
         }
 
-        private void CheckForUE(object sender, PropertyChangedEventArgs e)
+        private void Startup(object sender, PropertyChangedEventArgs e)
         {
             if (myPluginDetector.UnrealVersion == new Version(0, 0, 0))
             {
                 myLogger.LogMessage(LoggingLevel.INFO, "UE4 was not found");
                 return;
             }
-            
-            myLogger.LogMessage(LoggingLevel.INFO, $"UE4 vers: {myPluginDetector.UnrealVersion}");
-            var engineProject = mySolution.GetProjectsByName("UE4").FirstNotNull();
+
+            engineProject = mySolution.GetProjectsByName("UE4").FirstNotNull();
             mainProject = mySolution.GetProjectsByName(mySolution.Name).FirstNotNull();
+            
             if (engineProject == null)
             {
                 myLogger.LogMessage(LoggingLevel.WARN,  "UE4 project is not found");
                 return;
             }
 
-            myLogger.LogMessage(LoggingLevel.INFO, engineProject.ProjectFileLocation.Directory.ToString());
-            
             var projectConfigDirectory = mySolution.SolutionDirectory.AddSuffix("/Config");
             if (projectConfigDirectory.Exists != FileSystemPath.Existence.Directory)
             {
@@ -71,9 +73,9 @@ namespace RiderPlugin.UnrealLink.Ini
                 ProcessPlatform(projectConfigDirectory, platform);
             }
 
-            var classDefaults = perCategoryCache["game"].GetClassDefaults("MyGenerator");
-            var classProperty = perCategoryCache["game"].GetClassProperty("MyGenerator", "wallProbability");
-            var classDefaultValue = perCategoryCache["game"].GetClassDefaultValue("MyGenerator", "floorProbability","android");
+            // var classDefaults = perCategoryCache["game"].GetClassDefaults("MyGenerator");
+            // var classProperty = perCategoryCache["game"].GetClassProperty("MyGenerator", "wallProbability");
+            // var classDefaultValue = perCategoryCache["game"].GetClassDefaultValue("MyGenerator", "floorProbability","android");
         }
 
         private void ProcessPlatform(FileSystemPath projectConfigDirectory, string platformName)
@@ -81,26 +83,22 @@ namespace RiderPlugin.UnrealLink.Ini
             var platformDirectory = projectConfigDirectory.Clone();
             if (platformName != IniCachedProperty.DefaultPlatform)
             {
-                platformDirectory = projectConfigDirectory.AddSuffix("/" + platformName);
+                platformDirectory = projectConfigDirectory.AddSuffix($"/{platformName}");
+                
+                if (!platformDirectory.ExistsDirectory)
+                {
+                    return;
+                }
+                
+                myLogger.LogMessage(LoggingLevel.INFO, $"Platform {platformName} detected in config directory");
             }
 
-            if (!platformDirectory.ExistsDirectory)
-            {
-                return;
-            }
-            
-            var filesToProcess = new List<FileSystemPath>();
-            var projectFiles = GetIniFiles(platformDirectory);
-            
-            foreach (var file in projectFiles)
-            {
-                var iniFile = file.GetAbsolutePath();
-                var filename = iniFile.NameWithoutExtension.ToLower();
-                if (filename.StartsWith(platformName))
+            var filesToProcess = GetIniFiles(platformDirectory)
+                .Where(item =>
                 {
-                    filesToProcess.Add(iniFile);
-                } 
-            }
+                    var filename = item.NameWithoutExtension.ToLower();
+                    return filename.StartsWith(platformName);
+                });
 
             foreach (var file in filesToProcess)
             {
@@ -121,45 +119,6 @@ namespace RiderPlugin.UnrealLink.Ini
                 ParseIniFile(file, visitor);
             }
         }
-        
-        private List<FileSystemPath>[] GetOrderedFiles(FileSystemPath projectConfigDirectory, FileSystemPath engineConfigDirectory)
-        {
-            var orderedFiles = new List<FileSystemPath>[6];
-            for (int i = 0; i < 6; i++)
-            {
-                orderedFiles[i] = new List<FileSystemPath>();
-            }
-
-            var projectFiles = GetIniFiles(projectConfigDirectory);
-            
-            foreach (var file in projectFiles)
-            {
-                var iniFile = file.GetAbsolutePath();
-                var filename = iniFile.NameWithoutExtension.ToLower();
-                if (filename.StartsWith("default"))
-                {
-                    orderedFiles[4].Add(iniFile);
-                } 
-            }
-
-            var engineFiles = GetIniFiles(engineConfigDirectory);
-
-            foreach (var file in projectFiles)
-            {
-                var iniFile = file.GetAbsolutePath();
-                var filename = iniFile.NameWithoutExtension.ToLower();
-                if (filename == "base")
-                {
-                    orderedFiles[0].Add(iniFile);
-                }
-                else if (filename.StartsWith("base"))
-                {
-                    orderedFiles[1].Add(iniFile);                    
-                }
-            }
-
-            return orderedFiles;
-        }
 
         private void ParseIniFile(FileSystemPath path, IniVisitor visitor)
         {
@@ -171,18 +130,18 @@ namespace RiderPlugin.UnrealLink.Ini
             var parser = new IniParser(lexer);
             var file = parser.ParseFile();
 
-            var str = parser.DumpPsi(file);
-
-            
+            // var str = parser.DumpPsi(file);
             visitor.VisitFile(file, path);
         }
         
-        private IEnumerable<DirectoryEntryData> GetIniFiles(FileSystemPath directory)
+        private IEnumerable<FileSystemPath> GetIniFiles(FileSystemPath directory)
         {
             var entries = directory.GetDirectoryEntries();
 
-            var filteredEntries = entries.Where(entry => entry.IsFile && entry.GetAbsolutePath().ExtensionNoDot == "ini");
-            
+            var filteredEntries = entries
+                .Select(it => it.GetAbsolutePath())
+                .Where(entry => entry.ExistsFile && entry.ExtensionNoDot == "ini");
+
             return filteredEntries;
         }
     }

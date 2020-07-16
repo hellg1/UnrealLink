@@ -1,13 +1,12 @@
-﻿using System;
-using JetBrains.Util;
-using RiderPlugin.UnrealLink.Ini.IniLanguage;
+﻿using JetBrains.Util;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
     /// <summary>
     /// Class for storing ActionMappings and AxisMappings (i.e. key bindings)
+    /// TODO: create interface to access data
     /// </summary>
-    public class KeyBindingsCache : IIniCacher
+    public class KeyBindingsCache : IIniCacheBuilder
     {
         public KeyBindingsCache()
         {

@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Util;
-using NuGet;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
-    public class ClassDefaultsCache : IIniCacher
+    public class ClassDefaultsCache : IIniCacheBuilder
     {
         public ClassDefaultsCache(string projectName)
         {

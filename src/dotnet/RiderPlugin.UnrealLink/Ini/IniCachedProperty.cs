@@ -11,11 +11,13 @@ namespace RiderPlugin.UnrealLink.Ini
     {
         public IniCachedProperty(string key)
         {
+            Key = key;
         }
 
+        public string Key { get; }
+        
         public const string DefaultPlatform = "default";
         
-        //private List<IniCachedItem> generalValues = new List<IniCachedItem>();
         private Dictionary<string, List<IniCachedItem>> perPlatformValues = new Dictionary<string, List<IniCachedItem>> { { DefaultPlatform, new List<IniCachedItem>()} };
 
         public void ModifyValue(IniCachedItem newValue, IniPropertyOperators op, string platform = DefaultPlatform)

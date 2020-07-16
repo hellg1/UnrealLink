@@ -45,35 +45,16 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
 
                 var file = (IFile) builder.BuildTree();
 
-                var str = DumpPsi(file);
-                
                 return file;
             }
         }
 
+        // for debug purposes
         public string DumpPsi(IFile file)
         {
             var stringBuilder = new StringBuilder();
-                
             DebugUtil.DumpPsi(new StringWriter(stringBuilder), file);
-
             return stringBuilder.ToString();
-        }
-
-        private void SkipEmptyLines(PsiBuilder builder)
-        {
-            while (!builder.Eof() && IniTokenType.Whitespaces.Contains(builder.GetTokenType()))
-            {
-                builder.AdvanceLexer();
-            }
-        } 
-        
-        private void SkipWhitespaces(PsiBuilder builder)
-        {
-            while (!builder.Eof() && builder.GetTokenType() == IniTokenType.WHITESPACE)
-            {
-                builder.AdvanceLexer();
-            }
         }
 
         private void ParseSection(PsiBuilder builder)
@@ -137,6 +118,14 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
                 builder.AdvanceLexer();
             }
             
+            SkipWhitespaces(builder);
+            if (builder.Eof() || builder.GetTokenType() == IniTokenType.NEWLINE)
+            {
+                builder.Done(propertyStart, IniCompositeNodeType.PROPERTY, null);
+                return;
+            }
+
+            // some properties in engine have prefixes like "Windows:bIsEnabled=true" from DataDrivenPlatforms.ini
             if (builder.GetTokenType() == IniTokenType.PLATFORM)
             {
                 builder.AdvanceLexer();
@@ -155,7 +144,7 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
                 builder.AdvanceLexer();
             }
             
-            if (!SkipLinesplitter(builder) || builder.GetTokenType() == IniTokenType.NEWLINE)
+            if (!SkipLinesplitter(builder))
             {
                 builder.Done(propertyStart, IniCompositeNodeType.PROPERTY, null);
                 return;
@@ -166,7 +155,7 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
                 builder.AdvanceLexer();
             }
 
-            if (!SkipLinesplitter(builder) || builder.GetTokenType() == IniTokenType.NEWLINE)
+            if (!SkipLinesplitter(builder))
             {
                 builder.Done(propertyStart, IniCompositeNodeType.PROPERTY, null);
                 return;
@@ -257,6 +246,29 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
             builder.AdvanceLexer();
         }
         
+        /// <summary>
+        /// Skip empty lines (backslashes also would be skipped)
+        /// </summary>
+        private void SkipEmptyLines(PsiBuilder builder)
+        {
+            while (!builder.Eof() && IniTokenType.Whitespaces.Contains(builder.GetTokenType()))
+            {
+                builder.AdvanceLexer();
+            }
+        } 
+        
+        private void SkipWhitespaces(PsiBuilder builder)
+        {
+            while (!builder.Eof() && builder.GetTokenType() == IniTokenType.WHITESPACE)
+            {
+                builder.AdvanceLexer();
+            }
+        }
+        
+        /// <summary>
+        /// Skips backslashes and whitespaces
+        /// </summary>
+        /// <returns>False if eof or newline appears after backslash</returns>
         private bool SkipLinesplitter(PsiBuilder builder)
         {
             SkipWhitespaces(builder);

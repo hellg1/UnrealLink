@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using JetBrains.ReSharper.Feature.Services.StackTraces.StackTrace.Nodes;
 using JetBrains.ReSharper.Psi.Tree;
 using JetBrains.Util;
 using RiderPlugin.UnrealLink.Ini.IniLanguage;
@@ -14,11 +13,11 @@ namespace RiderPlugin.UnrealLink.Ini
     /// </summary>
     public class IniVisitor
     {
-        private List<IIniCacher> cachers = new List<IIniCacher>();
+        private List<IIniCacheBuilder> cacheBuilders = new List<IIniCacheBuilder>();
         private string curSection = "INVALID_SECTION";
 
         private IFile myFile;
-        private FileSystemPath myFilename;
+        private FileSystemPath myFilepath;
         
         public IniVisitor()
         {
@@ -27,9 +26,9 @@ namespace RiderPlugin.UnrealLink.Ini
         /// <summary>
         /// Adds custom cache builder
         /// </summary>
-        public void AddCacher(IIniCacher cacher)
+        public void AddCacher(IIniCacheBuilder cacheBuilder)
         {
-            cachers.Add(cacher);
+            cacheBuilders.Add(cacheBuilder);
         }
         
         /// <summary>
@@ -39,7 +38,7 @@ namespace RiderPlugin.UnrealLink.Ini
         {
             curSection = "INVALID_SECTION";
             myFile = file;
-            myFilename = filepath;
+            myFilepath = filepath;
             
             foreach (var node in myFile.Children())
             {
@@ -100,11 +99,11 @@ namespace RiderPlugin.UnrealLink.Ini
                     }
                 }
 
-                val.LastFile = myFilename;
+                val.File = myFilepath;
 
-                foreach (var proc in cachers)
+                foreach (var cacheBuilder in cacheBuilders)
                 {
-                    proc.ProcessProperty(myFilename, curSection,  curProperty, op, val);
+                    cacheBuilder.ProcessProperty(myFilepath, curSection,  curProperty, op, val);
                 }
             }
         }
@@ -137,7 +136,6 @@ namespace RiderPlugin.UnrealLink.Ini
                         }
                     }
                 }
-                
             }
         }
         

@@ -12,12 +12,17 @@ namespace RiderPlugin.UnrealLink.Ini
     {
         public IniCachedItem()
         {
-            Value = string.Empty;
         }
 
-        public FileSystemPath LastFile { get; set; }
+        // used if item is an object with multiple fields
         private Dictionary<string, IniCachedItem> values = new Dictionary<string, IniCachedItem>();
-        private string myValue;
+        // used if item is an elementary value (bool, string, etc)
+        private string myValue = string.Empty;
+        
+        /// <summary>
+        /// File where current value was acquired
+        /// </summary>
+        public FileSystemPath File { get; set; }
         
         /// <summary>
         /// Does value contains multiple fields (i.e. object)
@@ -39,6 +44,9 @@ namespace RiderPlugin.UnrealLink.Ini
             values.Add(key, value);
         }
 
+        /// <summary>
+        /// Constructs string representation of value
+        /// </summary>
         private StringBuilder ConstructValue()
         {
             if (!IsObject)
@@ -66,7 +74,7 @@ namespace RiderPlugin.UnrealLink.Ini
 
         public object Clone()
         {
-            var clone = new IniCachedItem {LastFile = LastFile};
+            var clone = new IniCachedItem {File = File};
 
             if (IsObject)
             {
