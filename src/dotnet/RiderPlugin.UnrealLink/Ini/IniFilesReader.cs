@@ -5,29 +5,42 @@ using System.IO;
 using System.Linq;
 using JetBrains.Diagnostics;
 using JetBrains.ProjectModel;
+using JetBrains.ReSharper.Feature.Services.Cpp.ProjectModel.UE4;
 using JetBrains.ReSharper.Psi;
 using JetBrains.Text;
 using JetBrains.Util;
 using RiderPlugin.UnrealLink.Ini.IniLanguage;
 using RiderPlugin.UnrealLink.PluginInstaller;
 
-
 namespace RiderPlugin.UnrealLink.Ini
 {
-    
     /// <summary>
     /// Class for processing ini files from project directory
-    /// TODO: make API for accessing cached data
     /// </summary>
     [SolutionComponent]
-    public class IniFileProcessor
+    public class IniFilesReader
     {
-        private static HashSet<string> platformNames = new HashSet<string>
+        private static Dictionary<CppUE4TargetPlatform, string> platformNames = new Dictionary<CppUE4TargetPlatform, string>
         {
-            IniCachedProperty.DefaultPlatform, "android", "hololens", "ios", "linux", "linuxaarch64", "lumin", "mac", "tvos", "unix", "windows"
+            { CppUE4TargetPlatform.Unknown, IniCachedProperty.DefaultPlatform },
+            { CppUE4TargetPlatform.Android, "android"},
+            { CppUE4TargetPlatform.Linux, "linux" },
+            { CppUE4TargetPlatform.Lumin, "lumin" },
+            { CppUE4TargetPlatform.Mac, "mac" },
+            { CppUE4TargetPlatform.Quail, "quail" },
+            { CppUE4TargetPlatform.Switch, "switch" },
+            { CppUE4TargetPlatform.Win32, "windows" },
+            { CppUE4TargetPlatform.Win64, "windows" },
+            { CppUE4TargetPlatform.PS4, "ps4" },
+            { CppUE4TargetPlatform.XboxOne, "xboxone" },
+            { CppUE4TargetPlatform.IOS, "ios" },
+            { CppUE4TargetPlatform.HTML5, "html5"},
+            { CppUE4TargetPlatform.TVOS, "tvos" },
         };
 
         private Dictionary<string, ClassDefaultsCache> perCategoryCache = new Dictionary<string, ClassDefaultsCache>();
+
+        private HashSet<string> processedPlatforms = new HashSet<string>();
         
         private ILogger myLogger;
         private UnrealPluginDetector myPluginDetector;
@@ -36,13 +49,31 @@ namespace RiderPlugin.UnrealLink.Ini
         private IProject mainProject;
         private IProject engineProject;
 
-        public IniFileProcessor(ISolution solution, ILogger logger, UnrealPluginDetector pluginDetector)
+        public IniFilesReader(ISolution solution, ILogger logger, UnrealPluginDetector pluginDetector)
         {
             myLogger = logger;
             myPluginDetector = pluginDetector;
             mySolution = solution;
 
             pluginDetector.InstallInfoProperty.PropertyChanged += Startup;
+        }
+
+        public string GetDefaultPropertyValue(CppUE4TargetPlatform targetPlatform, string category, string className, string property)
+        {
+            var categoryLower = category.ToLower();
+
+            if (!perCategoryCache.ContainsKey(categoryLower))
+            {
+                return null;
+            }
+            
+            var cache = perCategoryCache[categoryLower];
+            
+            var platform = platformNames.ContainsKey(targetPlatform)
+                ? platformNames[targetPlatform]
+                : IniCachedProperty.DefaultPlatform;
+
+            return cache.GetClassProperty(className, property)?.GetValues(platform).Last().Value;
         }
 
         private void Startup(object sender, PropertyChangedEventArgs e)
@@ -65,35 +96,33 @@ namespace RiderPlugin.UnrealLink.Ini
             var projectConfigDirectory = mySolution.SolutionDirectory.AddSuffix("/Config");
             if (projectConfigDirectory.Exists != FileSystemPath.Existence.Directory)
             {
-                myLogger.LogMessage(LoggingLevel.WARN, "Config directory is not found");
+                myLogger.LogMessage(LoggingLevel.WARN, "Config directory was not found");
+                return;
             }
 
-            foreach (var platform in platformNames)
+            // Process /Config/ folder
+            ProcessPlatform(projectConfigDirectory, projectConfigDirectory);
+            
+            var dirs = projectConfigDirectory.GetDirectoryEntries().Where(it => it.IsDirectory);
+
+            foreach (var dir in dirs)
             {
-                ProcessPlatform(projectConfigDirectory, platform);
+                ProcessPlatform(dir.GetAbsolutePath(), projectConfigDirectory);
             }
-
-            // var classDefaults = perCategoryCache["game"].GetClassDefaults("MyGenerator");
-            // var classProperty = perCategoryCache["game"].GetClassProperty("MyGenerator", "wallProbability");
-            // var classDefaultValue = perCategoryCache["game"].GetClassDefaultValue("MyGenerator", "floorProbability","android");
         }
 
-        private void ProcessPlatform(FileSystemPath projectConfigDirectory, string platformName)
+        private void ProcessPlatform(FileSystemPath path, FileSystemPath projectConfigDirectory)
         {
-            var platformDirectory = projectConfigDirectory.Clone();
-            if (platformName != IniCachedProperty.DefaultPlatform)
+            var platformName = path == projectConfigDirectory ? IniCachedProperty.DefaultPlatform : path.Name.ToLower();
+            
+            if (processedPlatforms.Contains(platformName) || platformName == "Layouts" || platformName == "Localization")
             {
-                platformDirectory = projectConfigDirectory.AddSuffix($"/{platformName}");
-                
-                if (!platformDirectory.ExistsDirectory)
-                {
-                    return;
-                }
-                
-                myLogger.LogMessage(LoggingLevel.INFO, $"Platform {platformName} detected in config directory");
+                return;
             }
 
-            var filesToProcess = GetIniFiles(platformDirectory)
+            processedPlatforms.Add(platformName);
+
+            var filesToProcess = GetIniFiles(path)
                 .Where(item =>
                 {
                     var filename = item.NameWithoutExtension.ToLower();
@@ -130,7 +159,6 @@ namespace RiderPlugin.UnrealLink.Ini
             var parser = new IniParser(lexer);
             var file = parser.ParseFile();
 
-            // var str = parser.DumpPsi(file);
             visitor.VisitFile(file, path);
         }
         

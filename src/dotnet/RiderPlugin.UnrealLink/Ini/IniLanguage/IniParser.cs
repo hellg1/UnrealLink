@@ -44,6 +44,7 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
                 builder.Done(fileMark, IniFileNodeType.Instance, null);
 
                 var file = (IFile) builder.BuildTree();
+                var dump = DumpPsi(file);
 
                 return file;
             }

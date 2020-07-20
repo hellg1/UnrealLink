@@ -60,7 +60,7 @@ namespace RiderPlugin.UnrealLink.Ini
             }
         }
 
-        public IniCachedItem[] GetValues(string platform = DefaultPlatform)
+        public List<IniCachedItem> GetValues(string platform = DefaultPlatform)
         {
             if (!perPlatformValues.ContainsKey(platform))
             {
@@ -69,7 +69,7 @@ namespace RiderPlugin.UnrealLink.Ini
             
             if (perPlatformValues.ContainsKey(platform))
             {
-                return perPlatformValues[platform].ToArray();
+                return perPlatformValues[platform];
             }
 
             return null;
