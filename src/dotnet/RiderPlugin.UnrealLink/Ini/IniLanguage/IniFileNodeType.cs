@@ -23,8 +23,8 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
         {
         }
         
-        public static readonly IniCompositeNodeType SECTION  = new IniCompositeNodeType("Ini_SECTION", 0);
-        public static readonly IniCompositeNodeType SECTION_HEADER  = new IniCompositeNodeType("Ini_SECTION", 1);
+        public static readonly IniCompositeNodeType SECTION = new IniCompositeNodeType("Ini_SECTION", 0);
+        public static readonly IniCompositeNodeType SECTION_HEADER = new IniCompositeNodeType("Ini_SECTION", 1);
         public static readonly IniCompositeNodeType PROPERTY = new IniCompositeNodeType("Ini_PROPERTY", 2);
         public static readonly IniCompositeNodeType VAL_OBJECT = new IniCompositeNodeType("Ini_VAL_OBJECT", 2);
 
