@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
     /// <summary>
     /// Represents ini file section
     /// </summary>
-    public class IniCachedSection
+    public class IniCachedSection : ICloneable
     {
         private Dictionary<string, IniCachedProperty> properties = new Dictionary<string, IniCachedProperty>();
 
@@ -32,5 +33,17 @@ namespace RiderPlugin.UnrealLink.Ini
             
             return null;
         }
-     }
+
+        public object Clone()
+        {
+            var copy = new IniCachedSection();
+
+            foreach (var item in properties)
+            {
+                copy.properties.Add(item.Key, item.Value.Clone() as IniCachedProperty);
+            }
+
+            return copy;
+        }
+    }
 }

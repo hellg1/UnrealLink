@@ -15,7 +15,7 @@ namespace RiderPlugin.UnrealLink.Ini
         }
 
         // used if item is an object with multiple fields
-        private Dictionary<string, IniCachedItem> values = new Dictionary<string, IniCachedItem>();
+        private Dictionary<string, List<IniCachedItem>> values = new Dictionary<string, List<IniCachedItem>>();
         // used if item is an elementary value (bool, string, etc)
         private string myValue = string.Empty;
         
@@ -41,7 +41,11 @@ namespace RiderPlugin.UnrealLink.Ini
         public void AddValue(string key, IniCachedItem value)
         {
             IsObject = true;
-            values.Add(key, value);
+            if (!values.ContainsKey(key))
+            {
+                values.Add(key, new List<IniCachedItem>());
+            }
+            values[key].Add(value);
         }
 
         /// <summary>
@@ -58,12 +62,21 @@ namespace RiderPlugin.UnrealLink.Ini
             res.Append("(");
             string comma = "";
             
-            foreach (var item in values)
+            foreach (var pair in values)
             {
                 res.Append(comma);
-                res.Append(item.Key);
+                res.Append(pair.Key);
                 res.Append("=");
-                res.Append(item.Value.ConstructValue());
+                res.Append("[");
+
+                foreach (var item in pair.Value)
+                {
+                    res.Append(item.ConstructValue());
+                    res.Append(",");
+                }
+
+
+                res.Append("]");
                 comma = ",";
             }
             
@@ -78,9 +91,12 @@ namespace RiderPlugin.UnrealLink.Ini
 
             if (IsObject)
             {
-                foreach (var it in values)
+                foreach (var pair in values)
                 {
-                    clone.AddValue(it.Key, it.Value.Clone() as IniCachedItem);
+                    foreach (var item in pair.Value)
+                    {
+                        clone.AddValue(pair.Key, item.Clone() as IniCachedItem);
+                    }
                 }
             }
             else

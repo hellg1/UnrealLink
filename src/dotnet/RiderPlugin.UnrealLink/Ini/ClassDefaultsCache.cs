@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Util;
 
 namespace RiderPlugin.UnrealLink.Ini
 {
-    public class ClassDefaultsCache : IIniCacheBuilder
+    public class ClassDefaultsCache : IIniCacheBuilder, ICloneable
     {
         public ClassDefaultsCache(string projectName)
         {
@@ -81,5 +82,17 @@ namespace RiderPlugin.UnrealLink.Ini
         }
         
         public bool IsEmpty => sections.IsEmpty();
+
+        public object Clone()
+        {
+            var copy = new ClassDefaultsCache(sectionPrefix.Substring(8));
+
+            foreach (var item in sections)
+            {
+                copy.sections.Add(item.Key, item.Value.Clone() as IniCachedSection);
+            }
+
+            return copy;
+        }
     }
 }

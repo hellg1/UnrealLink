@@ -45,7 +45,7 @@ namespace RiderPlugin.UnrealLink.Ini
                 if (node.NodeType == IniCompositeNodeType.SECTION)
                 {
                     curSection = GetSectionHeader(node);
-
+                    
                     foreach (var child in node.Children())
                     {
                         VisitSection(child);

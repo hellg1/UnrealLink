@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Util;
 
@@ -7,7 +8,7 @@ namespace RiderPlugin.UnrealLink.Ini
     /// <summary>
     /// Represents property in ini file
     /// </summary>
-    public class IniCachedProperty
+    public class IniCachedProperty : ICloneable
     {
         public IniCachedProperty(string key)
         {
@@ -87,6 +88,23 @@ namespace RiderPlugin.UnrealLink.Ini
 
                 return res;
             }
+        }
+
+        public object Clone()
+        {
+            var copy = new IniCachedProperty(Key);
+            foreach (var perPlatformVal in perPlatformValues)
+            {
+                copy.perPlatformValues.Add(perPlatformVal.Key, new List<IniCachedItem>());
+                {
+                    foreach (var item in perPlatformVal.Value)
+                    {
+                        copy.perPlatformValues[perPlatformVal.Key].Add(item.Clone() as IniCachedItem);
+                    }
+                }
+            }
+
+            return copy;
         }
     }
 
