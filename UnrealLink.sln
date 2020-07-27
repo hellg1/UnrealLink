@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "misc", "{4A9ABB95-3
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.RiderPlugin.UnrealLink", "src\dotnet\test2\src\Test.RiderPlugin.UnrealLink.csproj", "{BD0A4918-51BC-4A9B-BA6B-CE87C3613944}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +25,10 @@ Global
 		{084172D1-A9C6-46D0-96AD-05C5B09A5E5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{084172D1-A9C6-46D0-96AD-05C5B09A5E5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{084172D1-A9C6-46D0-96AD-05C5B09A5E5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD0A4918-51BC-4A9B-BA6B-CE87C3613944}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD0A4918-51BC-4A9B-BA6B-CE87C3613944}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD0A4918-51BC-4A9B-BA6B-CE87C3613944}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD0A4918-51BC-4A9B-BA6B-CE87C3613944}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

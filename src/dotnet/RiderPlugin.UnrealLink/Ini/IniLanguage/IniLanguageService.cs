@@ -43,7 +43,7 @@ namespace RiderPlugin.UnrealLink.Ini.IniLanguage
         public override bool SupportTypeMemberCache => false;
         public override ITypePresenter TypePresenter => CLRTypePresenter.Instance;
         
-        internal class IniLexerFactory : ILexerFactory
+        public class IniLexerFactory : ILexerFactory
         {
             public ILexer CreateLexer(IBuffer buffer)
             {
