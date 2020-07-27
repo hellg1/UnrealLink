@@ -2,6 +2,7 @@
 using JetBrains.ReSharper.Psi;
 using JetBrains.ReSharper.Psi.Css;
 using JetBrains.ReSharper.Resources.Shell;
+using JetBrains.TestFramework;
 using NUnit.Framework;
 using RiderPlugin.UnrealLink.Ini.IniLanguage;
 
@@ -17,7 +18,7 @@ namespace Test.RiderPlugin.UnrealLink.Ini
     // }
 
     [TestFixture]
-    public class BaseTest
+    public class SimpleTest : BaseTest
     {
         // Works fine
         [Test]
