@@ -19,4 +19,7 @@
   </ItemGroup>
 
   <Import Project="$(DotNetSdkPath)\Build\SubplatformReference.ReSharperCpp_RiderPlugin.Props" />
+  <Target Name="CppHack" AfterTargets="PrepareForRun">
+    <Move SourceFiles="$(OutDir)JetBrains.ReSharper.Psi.Cpp.dll" DestinationFiles="$(OutDir)x86\JetBrains.ReSharper.Psi.Cpp.dll" />
+  </Target>
 </Project>

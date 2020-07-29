@@ -38,13 +38,13 @@ namespace Test.RiderPlugin.UnrealLink.Ini
         }
         
         // Not working
-        // [Test]
-        // public void Test3()
-        // {
-        //     Assert.NotNull(Languages.Instance.GetLanguageByName(IniLanguage.Name));
-        //     Assert.NotNull(IniProjectFileType.Instance);
-        //     var projectFileTypes = Shell.Instance.GetComponent<IProjectFileTypes>();
-        //     Assert.NotNull(projectFileTypes.GetFileType(IniProjectFileType.Name));
-        // }
+        [Test]
+        public void Test3()
+        {
+            Assert.NotNull(Languages.Instance.GetLanguageByName(IniLanguage.Name));
+            Assert.NotNull(IniProjectFileType.Instance);
+            var projectFileTypes = Shell.Instance.GetComponent<IProjectFileTypes>();
+            Assert.NotNull(projectFileTypes.GetFileType(IniProjectFileType.Name));
+        }
     }
 }
