@@ -11,10 +11,12 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(FLogRiderLinkModule, Log, All);
 
-class FRiderLinkModule : public IModuleInterface
+DECLARE_DELEGATE(FConnectionEstablishedDelegate);
+
+class RIDERLINK_API FRiderLinkModule : public IModuleInterface
 {
 public:
-	FRiderLinkModule() = default;
+	FRiderLinkModule();
 	~FRiderLinkModule() = default;
 
 	static FRiderLinkModule& Get()
@@ -31,9 +33,19 @@ public:
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
-	virtual bool SupportsDynamicReloading() override;
+	virtual bool SupportsDynamicReloading() override { return true; }
 
-	rd::Lifetime CreateNestedLifetime() const { return RdConnection.Scheduler.lifetime.create_nested(); }
+	void QueueModelAction(std::function<void(JetBrains::EditorPlugin::RdEditorModel&)> Action);
+
+	rd::Lifetime CreateSocketNestedLifetime() const { return Scheduler.lifetime.create_nested(); }
+
+	FConnectionEstablishedDelegate ConnectionEstablishedDelegate;
 
 	RdConnection RdConnection;
+
+private:
+	rd::LifetimeDefinition ModuleLifetimeDef;
+	rd::Lifetime ModuleLifetime;
+public:
+	rd::SingleThreadScheduler Scheduler;
 };

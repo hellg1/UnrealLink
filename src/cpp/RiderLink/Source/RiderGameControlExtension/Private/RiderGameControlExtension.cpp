@@ -303,9 +303,9 @@ static int ModeFromSettings()
 }
 
 
-void FRiderGameControlExtensionModule::StartupModule()
+void FRiderGameControlExtensionModule::Init()
 {
-    UE_LOG(FLogRiderGameControlExtensionModule, Verbose, TEXT("STARTUP START"));
+    UE_LOG(FLogRiderGameControlExtensionModule, Verbose, TEXT("INIT START"));
 
     if (FSlateApplication::IsInitialized())
     {
@@ -313,11 +313,9 @@ void FRiderGameControlExtensionModule::StartupModule()
     }
 
     FRiderLinkModule& RiderLinkModule = FRiderLinkModule::Get();
-    RdConnection& RdConnection = RiderLinkModule.RdConnection;
-    JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel = RdConnection.UnrealToBackendModel;
 
-    const rd::Lifetime NestedLifetime = RiderLinkModule.CreateNestedLifetime();
-    RdConnection.Scheduler.queue([NestedLifetime, &UnrealToBackendModel, this]()
+    const rd::Lifetime NestedLifetime = RiderLinkModule.CreateSocketNestedLifetime();
+    RiderLinkModule.QueueModelAction([NestedLifetime, this](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
     {
         UnrealToBackendModel.get_playStateFromRider().advise(
             NestedLifetime,
@@ -358,7 +356,7 @@ void FRiderGameControlExtensionModule::StartupModule()
             });
     });
 
-    RdConnection.Scheduler.queue([NestedLifetime, &UnrealToBackendModel]()
+    RiderLinkModule.QueueModelAction([NestedLifetime](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
     {
         UnrealToBackendModel.get_frameSkip().advise(NestedLifetime, []()
         {
@@ -369,57 +367,61 @@ void FRiderGameControlExtensionModule::StartupModule()
         });
     });
 
-    FEditorDelegates::BeginPIE.AddLambda([this, &RdConnection](const bool)
+    FEditorDelegates::BeginPIE.AddLambda([this](const bool)
     {        
         playMode = ModeFromSettings();
-        RdConnection.Scheduler.queue([&RdConnection, lambdaPlayMode=playMode]()
+        FRiderLinkModule& RiderLinkModule = FRiderLinkModule::Get();
+        RiderLinkModule.QueueModelAction([lambdaPlayMode=playMode](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
         {
             if (!GUnrealEd) return;
 
-            RdConnection.UnrealToBackendModel.get_playModeFromEditor().fire(lambdaPlayMode);
-            RdConnection.UnrealToBackendModel.get_playStateFromEditor().fire(JetBrains::EditorPlugin::PlayState::Play);
+            UnrealToBackendModel.get_playModeFromEditor().fire(lambdaPlayMode);
+            UnrealToBackendModel.get_playStateFromEditor().fire(JetBrains::EditorPlugin::PlayState::Play);
         });
     });
 
-    FEditorDelegates::EndPIE.AddLambda([this, &RdConnection](const bool)
+    FEditorDelegates::EndPIE.AddLambda([this](const bool)
     {
-        RdConnection.Scheduler.queue([&RdConnection]()
+        FRiderLinkModule& RiderLinkModule = FRiderLinkModule::Get();
+        RiderLinkModule.QueueModelAction([](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
         {
             if (!GUnrealEd) return;
 
-            RdConnection.UnrealToBackendModel.get_playStateFromEditor().fire(JetBrains::EditorPlugin::PlayState::Idle);
+            UnrealToBackendModel.get_playStateFromEditor().fire(JetBrains::EditorPlugin::PlayState::Idle);
         });
     });
 
-    FEditorDelegates::PausePIE.AddLambda([this, &RdConnection](const bool)
+    FEditorDelegates::PausePIE.AddLambda([this](const bool)
     {
-        RdConnection.Scheduler.queue([&RdConnection]()
+        FRiderLinkModule& RiderLinkModule = FRiderLinkModule::Get();
+        RiderLinkModule.QueueModelAction([](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
         {
             if (!GUnrealEd) return;
 
-            RdConnection.UnrealToBackendModel.get_playStateFromEditor().fire(JetBrains::EditorPlugin::PlayState::Pause);
+            UnrealToBackendModel.get_playStateFromEditor().fire(JetBrains::EditorPlugin::PlayState::Pause);
         });
     });
 
-    FEditorDelegates::ResumePIE.AddLambda([this, &RdConnection](const bool)
+    FEditorDelegates::ResumePIE.AddLambda([this](const bool)
     {
-        RdConnection.Scheduler.queue([&RdConnection]()
+        FRiderLinkModule& RiderLinkModule = FRiderLinkModule::Get();
+        RiderLinkModule.QueueModelAction([](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
         {
             if (!GUnrealEd) return;
 
-            RdConnection.UnrealToBackendModel.get_playStateFromEditor().fire(JetBrains::EditorPlugin::PlayState::Play);
+            UnrealToBackendModel.get_playStateFromEditor().fire(JetBrains::EditorPlugin::PlayState::Play);
         });
     });
 
     // Initial sync.
     playMode = ModeFromSettings();
-    RdConnection.Scheduler.queue([&RdConnection, lambdaPlayMode=playMode]()
+    RiderLinkModule.QueueModelAction([lambdaPlayMode=playMode](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
     {        
-        RdConnection.UnrealToBackendModel.get_playModeFromEditor().fire(lambdaPlayMode);
+        UnrealToBackendModel.get_playModeFromEditor().fire(lambdaPlayMode);
     });
-    RdConnection.Scheduler.queue([this, NestedLifetime, &RdConnection]()
+    RiderLinkModule.QueueModelAction([this, NestedLifetime](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
     {
-       RdConnection.UnrealToBackendModel.get_playModeFromRider().advise(NestedLifetime, [this](int inPlayMode)
+       UnrealToBackendModel.get_playModeFromRider().advise(NestedLifetime, [this](int inPlayMode)
        {
            playMode = inPlayMode;
        }); 

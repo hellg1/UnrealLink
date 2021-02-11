@@ -15,7 +15,8 @@ public:
     ~FRiderGameControlExtensionModule() = default;
 
     /** IModuleInterface implementation */
-    virtual void StartupModule() override;
+    virtual void StartupModule() override { Init(); }
+    void Init();
     virtual void ShutdownModule() override;
     virtual bool SupportsDynamicReloading() override { return true; };
 

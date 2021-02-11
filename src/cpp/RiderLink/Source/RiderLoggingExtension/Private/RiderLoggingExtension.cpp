@@ -57,24 +57,21 @@ void FRiderLoggingExtensionModule::StartupModule()
 
     FRiderLinkModule& RiderLinkModule = FRiderLinkModule::Get();
 
-    RdConnection& RdConnection = RiderLinkModule.RdConnection;
-
     outputDevice.onSerializeMessage.BindLambda(
-        [this, &RdConnection](const TCHAR* msg, ELogVerbosity::Type Type,
+        [this, &RiderLinkModule](const TCHAR* msg, ELogVerbosity::Type Type,
                const class FName& Name, TOptional<double> Time)
         {
             if (Type > ELogVerbosity::All) return;
 
-            rd::ISignal<JetBrains::EditorPlugin::UnrealLogEvent> const & UnrealLog = RdConnection.UnrealToBackendModel.get_unrealLog();
             rd::optional<rd::DateTime> DateTime;
             if (Time)
             {
                 DateTime = GetTimeNow(Time.GetValue());
             }
 
-            RdConnection.Scheduler.queue([&UnrealLog, Msg = FString(msg), Type,
+            RiderLinkModule.QueueModelAction([Msg = FString(msg), Type,
                     Name = Name.GetPlainNameString(),
-                    DateTime]()
+                    DateTime](JetBrains::EditorPlugin::RdEditorModel& Model)
                 {
                     JetBrains::EditorPlugin::LogMessageInfo MessageInfo{Type, Name, DateTime};
 
@@ -88,14 +85,14 @@ void FRiderLoggingExtensionModule::StartupModule()
                     while (Tail.Split("\n", &ToSend, &Tail))
                     {
                         ToSend.TrimEndInline();
-                        UnrealLog.fire(
+                        Model.get_unrealLog().fire(
                             JetBrains::EditorPlugin::UnrealLogEvent{
                                 MessageInfo, ToSend, GetPathRanges(PathPattern, ToSend),
                                 GetMethodRanges(MethodPattern, ToSend)
                             });
                     }
                     Tail.TrimEndInline();
-                    UnrealLog.fire(
+                    Model.get_unrealLog().fire(
                         JetBrains::EditorPlugin::UnrealLogEvent{
                             MessageInfo, Tail, GetPathRanges(PathPattern, Tail),
                             GetMethodRanges(MethodPattern, Tail)

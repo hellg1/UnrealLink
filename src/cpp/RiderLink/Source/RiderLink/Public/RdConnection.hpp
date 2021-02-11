@@ -11,20 +11,14 @@
 class RdConnection
 {
 public:
-	RdConnection();
-	~RdConnection();
+	RdConnection() = default;
+	~RdConnection() = default;
 
-	void Init();
-	void Shutdown();
+	void Init(rd::SingleThreadScheduler* Scheduler, rd::Lifetime SocketLifetime);
 
 	JetBrains::EditorPlugin::RdEditorModel UnrealToBackendModel;
 
 private:
+	TUniquePtr<rd::LifetimeDefinition> Definition;
 	TUniquePtr<rd::IProtocol> Protocol;
-
-	rd::LifetimeDefinition SocketLifetimeDef;
-	rd::Lifetime SocketLifetime;
-
-public:
-	rd::SingleThreadScheduler Scheduler;
 };

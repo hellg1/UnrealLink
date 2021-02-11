@@ -42,7 +42,6 @@ void FRiderBlueprintExtensionModule::StartupModule()
     UE_LOG(FLogRiderBlueprintExtensionModule, Verbose, TEXT("STARTUP START"));
 
     FRiderLinkModule& RiderLinkModule = FRiderLinkModule::Get();
-    RdConnection& RdConnection = RiderLinkModule.RdConnection;
 
     const FAssetRegistryModule* AssetRegistryModule = &FModuleManager::LoadModuleChecked<FAssetRegistryModule>
         (AssetRegistryConstants::ModuleName);
@@ -54,9 +53,8 @@ void FRiderBlueprintExtensionModule::StartupModule()
         // BluePrintProvider::AddAsset(AssetData);
     });
 
-    const rd::Lifetime NestedLifetime = RiderLinkModule.CreateNestedLifetime();
-    JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel = RdConnection.UnrealToBackendModel;
-    RdConnection.Scheduler.queue([this, NestedLifetime, &UnrealToBackendModel]()
+    const rd::Lifetime NestedLifetime = RiderLinkModule.CreateSocketNestedLifetime();
+    RiderLinkModule.QueueModelAction([this, NestedLifetime](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
     {
         UnrealToBackendModel.get_openBlueprint().advise(
             NestedLifetime,
@@ -93,9 +91,10 @@ void FRiderBlueprintExtensionModule::StartupModule()
             return BluePrintProvider::IsBlueprint(pathName);
         });
     });
-    BluePrintProvider::OnBlueprintAdded.BindLambda([this, &UnrealToBackendModel, &RdConnection](UBlueprint* Blueprint)
+    
+    BluePrintProvider::OnBlueprintAdded.BindLambda([this, &RiderLinkModule](UBlueprint* Blueprint)
     {
-        RdConnection.Scheduler.queue([this, Blueprint, &UnrealToBackendModel]
+        RiderLinkModule.QueueModelAction([this, Blueprint](JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel)
         {
             UnrealToBackendModel.get_onBlueprintAdded().fire(
                 JetBrains::EditorPlugin::UClass(Blueprint->GetPathName()));
