@@ -3,33 +3,25 @@
 #include "ProtocolFactory.h"
 #include "Model/Library/UE4Library/UE4Library.Generated.h"
 
-void RdConnection::Init(rd::SingleThreadScheduler * Scheduler, rd::Lifetime AppLifetime)
+void RdConnection::Init(rd::SingleThreadScheduler * Scheduler, rd::LifetimeDefinition& SocketLifetimeDef)
 {
-    Definition = MakeUnique<rd::LifetimeDefinition>(AppLifetime);
-    rd::Lifetime SocketLifetime = Definition->lifetime;
-    SocketLifetime->add_action([this, Scheduler, AppLifetime]()
+    Protocol = ProtocolFactory::Create(Scheduler, SocketLifetimeDef.lifetime);
+    Scheduler->queue([this, &SocketLifetimeDef]()
     {
-        if(!AppLifetime->is_terminated())
+        Protocol->wire->connected.view(SocketLifetimeDef.lifetime, [&SocketLifetimeDef] (rd::Lifetime Lifetime, bool const& Cond)
         {
-            this->Init(Scheduler, AppLifetime);
-        }
-    });
-    Protocol = ProtocolFactory::Create(Scheduler, SocketLifetime);
-    Scheduler->queue([&, SocketLifetime]()
-    {
-        UnrealToBackendModel.connect(SocketLifetime, Protocol.Get());
-        JetBrains::EditorPlugin::UE4Library::serializersOwner.registerSerializersCore(
-            UnrealToBackendModel.get_serialization_context().get_serializers()
-        );
-        Protocol->wire->connected.view(SocketLifetime, [&] (rd::Lifetime Lifetime, bool const& Cond)
-        {
+            UE_LOG(LogTemp, Log, TEXT("RdConnection::Connection status changed %b"), Cond);
            if(Cond)
            {
-               Lifetime->add_action([&]()
+               Lifetime->add_action([&SocketLifetimeDef]()
                {
-                  Definition->terminate();
+                  SocketLifetimeDef.terminate();
                });
            } 
         });
+        UnrealToBackendModel.connect(SocketLifetimeDef.lifetime, Protocol.Get());
+        JetBrains::EditorPlugin::UE4Library::serializersOwner.registerSerializersCore(
+            UnrealToBackendModel.get_serialization_context().get_serializers()
+        );
     });
 }

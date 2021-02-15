@@ -16,7 +16,7 @@ DECLARE_DELEGATE(FConnectionEstablishedDelegate);
 class RIDERLINK_API FRiderLinkModule : public IModuleInterface
 {
 public:
-	FRiderLinkModule();
+	FRiderLinkModule() = default;
 	~FRiderLinkModule() = default;
 
 	static FRiderLinkModule& Get()
@@ -41,11 +41,15 @@ public:
 
 	FConnectionEstablishedDelegate ConnectionEstablishedDelegate;
 
-	RdConnection RdConnection;
-
 private:
-	rd::LifetimeDefinition ModuleLifetimeDef;
-	rd::Lifetime ModuleLifetime;
-public:
-	rd::SingleThreadScheduler Scheduler;
+
+	void InitConnection();
+	
+	rd::LifetimeDefinition ModuleLifetimeDef{};
+	rd::Lifetime ModuleLifetime{ModuleLifetimeDef.lifetime};
+	rd::SingleThreadScheduler Scheduler{ModuleLifetime, "UnrealEditorScheduler"};
+
+	
+	TUniquePtr<rd::LifetimeDefinition> ConnectionLifetimeDefPtr;
+	TUniquePtr<RdConnection> RdConnection;
 };

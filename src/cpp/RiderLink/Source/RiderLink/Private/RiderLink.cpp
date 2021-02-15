@@ -20,25 +20,32 @@ void FRiderLinkModule::ShutdownModule()
 
 void FRiderLinkModule::QueueModelAction(std::function<void(JetBrains::EditorPlugin::RdEditorModel&)> Action)
 {
-  JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel = RdConnection.UnrealToBackendModel;
+  JetBrains::EditorPlugin::RdEditorModel& UnrealToBackendModel = RdConnection->UnrealToBackendModel;
   Scheduler.queue([&UnrealToBackendModel, Action]()
   {
     Action(UnrealToBackendModel);
   });
 }
 
-FRiderLinkModule::FRiderLinkModule():
-  ModuleLifetimeDef(rd::Lifetime::Eternal()),
-  ModuleLifetime(ModuleLifetimeDef.lifetime),
-  Scheduler{ModuleLifetime, "UnrealEditorScheduler"}
+void FRiderLinkModule::InitConnection()
 {
+  UE_LOG(FLogRiderLinkModule, Log, TEXT("Connection initialized"));
+  ConnectionLifetimeDefPtr = MakeUnique<rd::LifetimeDefinition>(ModuleLifetime);
+  ConnectionLifetimeDefPtr->lifetime->add_action([this]()
+  {
+    UE_LOG(FLogRiderLinkModule, Log, TEXT("Connection stopped"));
+    if(!ModuleLifetimeDef.is_terminated())
+      InitConnection();
+  });
+  RdConnection = MakeUnique<class RdConnection>();
+  RdConnection->Init(&Scheduler, *ConnectionLifetimeDefPtr.Get());
 }
 
 void FRiderLinkModule::StartupModule()
 {
-  UE_LOG(FLogRiderLinkModule, Verbose, TEXT("STARTUP START"));
-  RdConnection.Init(&Scheduler, ModuleLifetime);
-  UE_LOG(FLogRiderLinkModule, Verbose, TEXT("STARTUP FINISH"));
+  UE_LOG(FLogRiderLinkModule, Log, TEXT("STARTUP START"));
+  InitConnection();
+  UE_LOG(FLogRiderLinkModule, Log, TEXT("STARTUP FINISH"));
 }
 
 #undef LOCTEXT_NAMESPACE

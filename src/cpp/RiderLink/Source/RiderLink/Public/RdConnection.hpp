@@ -14,7 +14,7 @@ public:
 	RdConnection() = default;
 	~RdConnection() = default;
 
-	void Init(rd::SingleThreadScheduler* Scheduler, rd::Lifetime SocketLifetime);
+	void Init(rd::SingleThreadScheduler* Scheduler, rd::LifetimeDefinition& SocketLifetimeDef);
 
 	JetBrains::EditorPlugin::RdEditorModel UnrealToBackendModel;
 
